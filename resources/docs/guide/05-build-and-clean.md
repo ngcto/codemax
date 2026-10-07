@@ -56,7 +56,9 @@ In context, that's enough. [`/tdd`](../../skills/tdd/SKILL.md) writes the smalle
 
 ## Clean before you commit
 
-The [Opening a PR playbook](../../skills/ultracode/playbooks/opening-a-pr.md) runs `unslop` and `no-comments` on the diff before each commit and applies [`/unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. Both skills are bundled with codemax. They remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
+The [Opening a PR playbook](../../skills/ultracode/playbooks/opening-a-pr.md) runs [deslop](../../skills/deslop/SKILL.md) on code before commit and [unslop](../../skills/unslop/SKILL.md) on prose. Both are bundled with codemax. Deslop removes unnecessary comments, unsupported internal guards, dead compatibility paths, and type-bypassing casts without changing behavior.
+
+Use `/skill:deslop <diff>` for a focused cleanup.
 
 For prose, `/unslop` takes a target and any extra rules you have:
 
@@ -76,7 +78,7 @@ Comments need their own pass, and not from the agent that wrote them. An author 
 
 [`/no-comments`](../../skills/no-comments/SKILL.md) spawns [Comment Sicko](../../agents/comment-sicko.md), a read-only reviewer with a short keep list: license headers, doc comments on a public API, links that explain what code can't, behavior forced by an external dependency you can't reshape. Everything else goes. A surprise in your own code gets no such pass. The comment comes back as a refactor flag, and `/no-comments` fixes the flags it accepts at the root cause. When a comment claims a constraint, "do not remove", the skill offers to encode the claim as a type, test, or lint. Either way, the comment comes out.
 
-The division of labor is worth keeping straight. `unslop` and `no-comments` cleans slop out of the code, `/unslop` cleans it out of prose, and `/no-comments` hands the comments to a reviewer who didn't write them.
+Use `deslop` for code, `unslop` for prose, and `no-comments` for an independent comment review.
 
 **Pitfall:** cleanup is not optional polish. A diff with narrating comments and defensive dead weight reads as unfinished to reviewers, and the extra code is where the next bug hides. If the diff feels padded, say `deslop it` before you commit, not after review calls it out.
 

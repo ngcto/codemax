@@ -36,7 +36,7 @@ Fail closed on placeholders, missing coordinates, unclear ownership, or unavaila
 
 Read `../reproduce-and-fix-issues/references/control-adapter.md`. Prove the control skill can launch the real app, reach every mapped user flow, exercise states without forcing outcomes, inspect readback, capture requested screenshots/video, and clean up its own resources.
 
-Use browser-use or cua-driver only after readiness checks. If missing or unconfigured, request approval before consulting setup guidance or helping install/configure. Do not silently restart shared services or take over the desktop. Leave reproduction disabled until the adapter passes.
+Read [control-ui](../../../../skills/control-ui/SKILL.md) to choose the driver, then read only its skill on demand and check readiness before driving. If missing or unconfigured, request approval before consulting setup guidance or helping install/configure. Do not silently restart shared services or take over the desktop. Leave reproduction disabled until the adapter passes.
 
 Discover configured Slack and tracker integrations with searchTools and describeTool. Confirm thread replies, attachment reads, dedupe queries, scoped updates, and compensating actions. Do not invent undocumented endpoints. A draft PR action needs an explicit grant; merge and deployment stay forbidden.
 

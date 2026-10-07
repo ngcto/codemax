@@ -14,7 +14,7 @@ Answer the question, do not launch work when the user only asked for help. Link 
 
 codemax is a Pi extension built for codemode-only agents. Loading it activates the fixed only-mode executor and plain default voice. Nontrivial work follows ultracode; trivial turns stay lightweight. No separate voice skill or Cursor Custom Mode is needed.
 
-- Install this local package with `pi install /path/to/codemax`, or try `pi -e /path/to/codemax/src/index.ts`. Run `/reload` after installation in an existing session.
+- Install with `pi install git:github.com/ngcto/codemax`, or try a local checkout with `pi -e /path/to/codemax/src/index.ts`. Run `/reload` after installation in an existing session.
 - Run `/skill:setup-codemax` to choose verified model roles, reasoning budget, web providers, and concurrency. Omitted roles inherit the parent model.
 - Run `/skill:ultracode <goal and falsifiable success check>`, or ask naturally. The persistent execution policy already applies every turn.
 - Call `tools.workflow({action:"list"})` for the complete skill, playbook, and automation inventory. Read a resource with `action:"read"`; start the appropriate playbook with `action:"start"` and a task.
@@ -22,7 +22,8 @@ codemax is a Pi extension built for codemode-only agents. Loading it activates t
 - `tools.panel` runs independent candidates/reviewers and optionally a cross-model judge. Writable workers need clean isolated worktrees. The parent verifies and grafts explicitly.
 - `tools.verify` captures command evidence, including a failing-first repro. A green build is not proof of a real UI/CLI outcome.
 - `tools.script({action:"list"})` lists durable orchestration, PR monitor, plan validator, worktree audit, and decision-log scripts.
-- `tools.control` preflights/drives browser-use and cua-driver. Missing readiness requires approved on-demand setup. Native GUI authorization never follows from a failed CDP attempt.
+- [deslop](../deslop/SKILL.md) cleans scoped code diffs; [unslop](../unslop/SKILL.md) cleans prose.
+- [control-ui](../control-ui/SKILL.md) chooses browser-use or cua-driver by use case and allowed method. [control-cli](../control-cli/SKILL.md) chooses command evidence or that UI route. Driver skills are hidden from automatic discovery and read on demand. `tools.control` handles preflight/driving; missing readiness requires approved setup. A failed route never authorizes another method.
 - `tools.search` and `tools.fetch` wrap hosted Exa, Firecrawl, and Parallel, trying anonymous access without credentials. Firecrawl may require account-backed access; keep provider errors visible. `tools.web` discovers extended remote tools. `/login <provider>` uses Pi's credential store and OAuth. GPT native web search replaces script search and keeps fetch; Grok adds native web/X tools. Other families retain provider search/fetch only.
 - `tools.capability` saves composable JavaScript as session, project, or global executable tools. No prefix. Tool-table snapshots refresh on the next codemode call; `capability(action=run)` executes immediately in the saving script.
 - `tools.learn` saves evidence-backed reusable skills outside the bundle; `tools.recall` retrieves them immediately. `tools.history` supports explicitly scoped recent-session mining.

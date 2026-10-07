@@ -25,7 +25,7 @@ export async function bashData(ctx: ExtensionToolContext, command: string, signa
 
 export function registerControl(pi: ExtensionAPI): void {
   pi.registerTool({
-    name: "control", label: "Control", exposure: "codemode", executionMode: "sequential", description: "Preflight or drive browser-use (CDP) and cua-driver (native GUI). Read the bundled skill before driving. Setup guidance is read only after user approval. No auto-install, permission changes, desktop takeover, or shared-daemon restart. Drive observe -> act once -> verify with exact targets.",
+    name: "control", label: "Control", exposure: "codemode", executionMode: "sequential", description: "Preflight or drive browser-use (CDP) and cua-driver (native GUI). Use control-ui to choose a route, then read the selected bundled driver skill before driving. Setup guidance is read only after user approval. No auto-install, permission changes, desktop takeover, or shared-daemon restart. Drive observe -> act once -> verify with exact targets.",
     parameters: Type.Object({ driver: enumSchema(["browser-use", "cua-driver"]), action: enumSchema(["status", "setup", "run"]), script: Type.Optional(Type.String()), command: Type.Optional(Type.String()), args: Type.Optional(Type.Record(Type.String(), Type.Unknown())), timeout: Type.Optional(Type.Number({ minimum: 1, maximum: 3600 })) }), outputSchema: dataSchema,
     async execute(_id, params, signal, _update, ctx) {
       const driver: Driver = params.driver;

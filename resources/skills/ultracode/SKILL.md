@@ -29,9 +29,9 @@ Remaining triggers:
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface → the **unslop** skill. Your reply is a prose surface. Write it per **Writing the reply**. Agent-facing prose follows the Authoring a skill playbook; evidence-backed reusable skills are saved outside the bundle with `learn`.
 - Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
-- Before commit → the `unslop` skill from the `codemax` plugin (`unslop` and `no-comments`).
-- Before review → the **no-comments** skill (`/no-comments`).
-- Shipping UI / IDE / CLI → the matching control skill. `codemax` publishes `verify` with a real CLI/TUI harness (CLIs and TUIs) and `browser-use` or `cua-driver` (browser / Electron / web UIs). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
+- Before commit → [deslop](../deslop/SKILL.md) for code, [unslop](../unslop/SKILL.md) for prose.
+- Before review → the **no-comments** skill (`/skill:no-comments`).
+- Shipping UI / IDE → [control-ui](../control-ui/SKILL.md) chooses browser-use for page/CDP work or cua-driver for native controls and GUI-only work. CLI/TUI → [control-cli](../control-cli/SKILL.md) chooses command evidence or that UI route. Read only the selected driver skill on demand. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
 - Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`). Do not assume another host supplies a babysit skill. That includes "babysit this", "get it green", "address the bugbot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Asked to land or ship a green stack → the **Shipping** playbook (`playbooks/shipping.md`). Green is not safe. Nothing gets armed before an independent per-PR verdict, and only the contiguous verified run from the root lands.

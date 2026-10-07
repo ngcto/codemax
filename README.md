@@ -22,7 +22,12 @@ Do not load another custom codemode executor. With `--tools`, include `codemode`
 /skill:setup-codemax
 /skill:ultracode <task>
 /skill:ultracode-help
+/skill:deslop <diff>
+/skill:control-ui <task>
+/skill:control-cli <task>
 ```
+
+`control-ui` chooses browser-use or cua-driver by use case. Driver skills load on demand.
 
 ## Important
 

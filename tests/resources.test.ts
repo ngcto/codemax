@@ -16,10 +16,11 @@ async function walk(dir: string): Promise<string[]> {
 
 test("resource catalog preserves the upstream procedures and does not bundle voice as a skill", async () => {
   const entries = await catalog();
-  assert.equal(entries.length, 78);
+  assert.equal(entries.length, 81);
+  assert.equal(entries.filter((entry) => entry.kind === "skill").length, 55);
   assert.equal(entries.filter((entry) => entry.kind === "playbook").length, 23);
   assert.equal(entries.filter((entry) => entry.kind === "automation").length, 3);
-  for (const name of ["ultracode", "browser-use", "cua-driver", "reflect", "arena", "swarm", "how", "why"]) assert.ok(entries.some((entry) => entry.name === name), name);
+  for (const name of ["ultracode", "deslop", "control-cli", "control-ui", "browser-use", "cua-driver", "reflect", "arena", "swarm", "how", "why"]) assert.ok(entries.some((entry) => entry.name === name), name);
   assert.equal(entries.some((entry) => entry.name === "bro"), false);
 });
 
@@ -39,6 +40,54 @@ test("bundled prose has renamed product references and no dangling local markdow
     }
   }
   assert.deepEqual(errors, []);
+});
+
+test("control guides choose tools by use case without importing harness setup", async () => {
+  const ui = await readFile(join(bundleRoot, "skills/control-ui/SKILL.md"), "utf8");
+  const cli = await readFile(join(bundleRoot, "skills/control-cli/SKILL.md"), "utf8");
+  const row = (body: string, useCase: string) => body.split("\n").find((line) => line.startsWith("| " + useCase + " |")) ?? "";
+  for (const [name, body] of [["control-ui", ui], ["control-cli", cli]] as const) {
+    assert.match(body, new RegExp("^name: " + name + "$", "m"));
+    assert.match(body, /^description: .+$/m);
+    assert.ok(body.includes("| Use case | Prefer |"));
+    assert.ok(body.includes("../browser-use/SKILL.md"));
+    assert.ok(body.includes("../cua-driver/SKILL.md"));
+    assert.doesNotMatch(body, /^disable-model-invocation: true$/m);
+    assert.doesNotMatch(body, /tmux|pty[.]openpty|playwright|remote-debugging-port/i);
+  }
+  assert.match(row(ui, "Public information"), /fetch/);
+  assert.match(row(ui, "Web page interaction"), /browser-use/);
+  assert.match(row(ui, "Native app"), /cua-driver/);
+  assert.match(row(ui, "GUI-only"), /cua-driver/);
+  assert.match(row(ui, "Browser chrome or OS dialogs"), /cua-driver/);
+  assert.match(row(ui, "Electron renderer"), /browser-use/);
+  assert.match(row(ui, "Electron menus or dialogs"), /cua-driver/);
+  assert.ok(ui.includes('action:"status"'));
+  assert.ok(ui.includes('action:"setup"'));
+  assert.ok(ui.includes("before reading setup guidance"));
+  assert.ok(ui.includes("not permission to switch"));
+  assert.ok(ui.includes("Observe fresh state, act once, then verify"));
+  assert.match(row(cli, "Noninteractive command"), /verify/);
+  assert.match(row(cli, "Native terminal"), /cua-driver/);
+  assert.match(row(cli, "Browser-hosted terminal"), /browser-use/);
+  assert.ok(cli.includes("../control-ui/SKILL.md"));
+  assert.ok(cli.includes("Do not build or install a terminal harness"));
+});
+
+test("deslop preserves cleanup scope, behavior, safety checks, and verification", async () => {
+  const body = await readFile(join(bundleRoot, "skills/deslop/SKILL.md"), "utf8");
+  assert.match(body, /^name: deslop$/m);
+  assert.ok(body.includes("Extra comments"));
+  assert.ok(body.includes("Defensive checks or try/catch"));
+  assert.ok(body.includes("Casts to `any`"));
+  assert.ok(body.includes("Deeply nested code"));
+  assert.ok(body.includes("Do not assume `main` exists"));
+  assert.ok(body.includes("Keep behavior unchanged"));
+  assert.ok(body.includes("boundary validation, authorization, cancellation, and recovery"));
+  assert.ok(body.includes("tools.verify"));
+  assert.ok(body.includes("../unslop/SKILL.md"));
+  assert.ok(body.includes("../no-comments/SKILL.md"));
+  assert.ok(body.includes("Bundled instructions are read-only"));
 });
 
 test("every script tool's default help executes rather than importing an inert module", async () => {

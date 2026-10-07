@@ -9,9 +9,10 @@ codemax's bundled resources are immutable task procedures. Use the implementatio
 | AskQuestion | `ask`; UI question/approval, never automatic consent |
 | Agent transcripts | `history`; scoped Pi JSONL sessions/active branch |
 | Per-role model rule | `settings`; verified models, session/project/global JSON configuration |
-| Browser / Electron / web UI | Bundled browser-use; `control` for preflight/driving |
-| Native desktop/window | Bundled cua-driver; observe exact target, act once, verify |
-| CLI/TUI proof | `verify` through the callable bash/PowerShell tool; explicit terminal harness for interactive cases |
+| Browser / Electron / web UI | `control-ui` chooses browser-use for page/CDP tasks or cua-driver for native controls and GUI-only work |
+| Native desktop/window | `control-ui` selects cua-driver; observe exact target, act once, verify |
+| CLI/TUI proof | `control-cli` chooses shell `verify` for command evidence or `control-ui` for visible terminal interaction |
+| Code cleanup / prose cleanup | `deslop` for a scoped code diff; `unslop` for writing |
 | create-skill / reflect / personal mode | `learn` outside the bundle, evidence required, no bundled edits |
 | More tools or helper scripts | `capability`, `web(action=tools/call)`, editable executable scripts |
 | PR/stack observation | Ported watch-pr; `gh` default, optional tools discovered first |
@@ -26,6 +27,6 @@ No cloud provisioning, resume-agent API, Automations editor, or persistent wake 
 
 Every model-issued tool call passes through codemode. Nested operations go through Pi's tool hooks. Await independent operations with Promise.allSettled; sequence dependent operations. Tool-table changes appear next script. A saved capability can run in the current script through capability(action=run).
 
-Setup of external control software is never automatic. Check readiness, ask approval, then read the current setup guidance. Installation, permissions, foreground control, external writes, deployments, secrets, and irreversible changes retain their own authorization gates.
+The browser-use and cua-driver skills use `disable-model-invocation: true`; `control-ui` reads only the selected driver on demand. Setup of external control software is never automatic. Check readiness, ask approval, then read the current setup guidance. Installation, permissions, foreground control, external writes, deployments, secrets, and irreversible changes retain their own authorization gates.
 
 Readonly delegates are a best-effort tool policy, not an OS sandbox. Packages and host tools run with the account's permissions. Use containers/VMs and narrowly scoped credentials for untrusted code. Keyless provider limits and OAuth availability depend on the provider deployment; errors must remain visible.
