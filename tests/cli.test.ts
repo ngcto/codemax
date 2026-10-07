@@ -14,20 +14,22 @@ import { Configuration } from "../src/config.ts";
 import { packageRoot } from "../src/paths.ts";
 import { runProcess, shellQuote } from "../src/process.ts";
 
-type Request = { tools?: { function?: { name?: string; description?: string } }[]; messages?: { role: string; content?: string | { type: string; text?: string }[] }[] };
-interface CliFixture { cwd: string; agentDir: string; cli: string; binary: string; model: Model<string>; requests: Request[]; }
+type Request = { fixtureProvider?: string; depth?: string; tools?: { function?: { name?: string; description?: string } }[]; messages?: { role: string; content?: string | { type: string; text?: string }[] }[] };
+interface CliFixture { cwd: string; agentDir: string; cli: string; binary: string; baseUrl: string; model: Model<string>; requests: Request[]; }
 
 // A local protocol fixture, not a live model account. Children run the real Pi CLI.
-async function withCliFixture(run: (fixture: CliFixture) => Promise<void>) {
+async function withCliFixture(run: (fixture: CliFixture) => Promise<void>, mode: "verify" | "delegate" = "verify") {
   const cwd = await mkdtemp(join(tmpdir(), "codemax-real-cli-"));
   const requests: Request[] = [];
   const server = createServer(async (req, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
-    requests.push(JSON.parse(body));
+    const depth = String(req.headers["x-fixture-depth"] ?? "0");
+    requests.push({ ...JSON.parse(body), depth, fixtureProvider: req.headers["x-fixture-provider"] });
     res.writeHead(200, { "content-type": "text/event-stream" });
-    const first = requests.length === 1;
-    const delta = first ? { role: "assistant", tool_calls: [{ index: 0, id: "call_cli", type: "function", function: { name: "codemode", arguments: JSON.stringify({ code: 'return await tools.verify({command:"pwd",label:"real CLI nested proof"});' }) } }] } : { role: "assistant", content: "real-cli-ok" };
+    const first = depth === "0" && requests.filter((request) => request.depth === "0").length === 1;
+    const code = mode === "delegate" ? 'return await tools.delegate({task:"Reply exactly: provider-worker-ok",readOnly:true,timeout:20});' : 'return await tools.verify({command:"pwd",label:"real CLI nested proof"});';
+    const delta = first ? { role: "assistant", tool_calls: [{ index: 0, id: "call_cli", type: "function", function: { name: "codemode", arguments: JSON.stringify({ code }) } }] } : { role: "assistant", content: depth === "0" ? "real-cli-ok" : "provider-worker-ok" };
     const chunk = (value: unknown) => res.write("data: " + JSON.stringify(value) + "\n\n");
     chunk({ id: "local-test", object: "chat.completion.chunk", created: 1, model: "local-test", choices: [{ index: 0, delta, finish_reason: null }] });
     chunk({ id: "local-test", object: "chat.completion.chunk", created: 1, model: "local-test", choices: [{ index: 0, delta: {}, finish_reason: first ? "tool_calls" : "stop" }], usage: { prompt_tokens: 2, completion_tokens: 2, total_tokens: 4 } });
@@ -46,7 +48,7 @@ async function withCliFixture(run: (fixture: CliFixture) => Promise<void>) {
     const binary = join(cwd, "pi-fixture");
     await writeFile(binary, "#!/usr/bin/env bash\nexec " + shellQuote(process.execPath) + " " + shellQuote(cli) + ' --offline "$@"\n', { mode: 0o700 });
     const model = { id: "local-test", provider: "local-fixture", api: "openai-completions", reasoning: false } as Model<string>;
-    await run({ cwd, agentDir, cli, binary, model, requests });
+    await run({ cwd, agentDir, cli, binary, baseUrl, model, requests });
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -55,6 +57,17 @@ async function withCliFixture(run: (fixture: CliFixture) => Promise<void>) {
 
 function requestText(request: Request, role: string): string {
   return (request.messages ?? []).filter((message) => message.role === role).map((message) => typeof message.content === "string" ? message.content : message.content?.map((block) => block.text ?? "").join("\n") ?? "").join("\n");
+}
+
+
+function assertDelegateOutcome(stdout: string, status: "complete" | "failed") {
+  const events = stdout.trim().split("\n").map((line) => { try { return JSON.parse(line); } catch { return undefined; } });
+  const nested = events.find((event) => event?.type === "tool_execution_end" && event.toolName === "delegate");
+  assert.ok(nested, "the actual Pi pipeline recorded the nested delegate result");
+  assert.equal(nested.isError, status !== "complete");
+  assert.equal(nested.result.structuredContent.status, status);
+  const message = events.find((event) => event?.type === "message_end" && event.message.role === "toolResult");
+  assert.equal(message?.message.nestedCalls?.calls.find((call: { name: string }) => call.name === "delegate")?.status, status === "complete" ? "ok" : "error");
 }
 
 function assertNestedProof(requests: Request[]) {
@@ -87,6 +100,54 @@ test("real Pi JSON-mode delegate loads fallback codemode and executes nested ver
       for (const [key, value] of Object.entries(original)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
   });
+});
+
+test("real Pi delegates inherit an extension-backed provider without loading ambient extensions", { skip: process.platform === "win32", timeout: 30000 }, async () => {
+  await withCliFixture(async ({ cwd, agentDir, cli, binary, baseUrl, requests }) => {
+    const provider = join(packageRoot, "tests/fixtures/cliproxy-provider.ts");
+    const unrelated = join(agentDir, "unrelated.ts");
+    await writeFile(unrelated, 'export default function () { throw new Error("AMBIENT_EXTENSION_LOADED"); }');
+    const settings = JSON.stringify({ extensions: [provider, unrelated], retry: { enabled: false }, compaction: { enabled: false } });
+    await writeFile(join(agentDir, "settings.json"), settings);
+    const result = await runProcess(process.execPath, [cli, "--offline", "--mode", "json", "--print", "--no-session", "--no-skills", "--no-context-files", "--no-extensions", "--no-approve", "--extension", provider, "--extension", join(packageRoot, "src/index.ts"), "--model", "cliproxyapi/gpt-provider-fixture", "Run the provider delegate smoke test."], {
+      cwd, env: { ...process.env, CODEMAX_PI_BINARY: binary, CODEMAX_FIXTURE_URL: baseUrl, PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1" }, timeoutMs: 25000,
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(result.stderr.trim(), "");
+    const tool = requests.filter((request) => request.depth === "0")[1]?.messages?.find((message) => message.role === "tool");
+    const text = typeof tool?.content === "string" ? tool.content : tool?.content?.map((block) => block.text ?? "").join("\n") ?? "";
+    assert.match(text, /"status":"complete"/, text);
+    assertDelegateOutcome(result.stdout, "complete");
+    assert.match(text, /"model":"cliproxyapi\/gpt-provider-fixture"/);
+    assert.match(text, /"output":"provider-worker-ok"/);
+    assert.equal(requests.length, 3);
+    assert.equal(requests.filter((request) => request.depth === "1").length, 1);
+    for (const request of requests) {
+      assert.equal(request.fixtureProvider, "cliproxyapi", "the custom stream implementation was used");
+      assert.deepEqual(request.tools?.map((tool) => tool.function?.name), ["codemode"]);
+    }
+    assert.equal(await readFile(join(agentDir, "settings.json"), "utf8"), settings);
+    assert.doesNotMatch(result.stdout + result.stderr, /AMBIENT_EXTENSION_LOADED|Model .* not found/);
+  }, "delegate");
+});
+
+test("delegates reject child model, API, and endpoint substitution before provider traffic", { skip: process.platform === "win32", timeout: 30000 }, async () => {
+  for (const changed of [{ CODEMAX_FIXTURE_CHILD_MODEL: "gpt-provider-fixture-other" }, { CODEMAX_FIXTURE_CHILD_API: "changed-proxy-api" }, { CODEMAX_FIXTURE_CHILD_ENDPOINT: "1" }]) {
+    await withCliFixture(async ({ cwd, agentDir, cli, binary, baseUrl, requests }) => {
+      const provider = join(packageRoot, "tests/fixtures/cliproxy-provider.ts");
+      const result = await runProcess(process.execPath, [cli, "--offline", "--mode", "json", "--print", "--no-session", "--no-skills", "--no-context-files", "--no-extensions", "--no-approve", "--extension", provider, "--extension", join(packageRoot, "src/index.ts"), "--model", "cliproxyapi/gpt-provider-fixture", "Run the provider delegate smoke test."], {
+        cwd, env: { ...process.env, ...changed, CODEMAX_PI_BINARY: binary, CODEMAX_FIXTURE_URL: baseUrl, PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1" }, timeoutMs: 25000,
+      });
+      assert.equal(result.exitCode, 0, result.stderr);
+      const tool = requests[1]?.messages?.find((message) => message.role === "tool");
+      const text = typeof tool?.content === "string" ? tool.content : tool?.content?.map((block) => block.text ?? "").join("\n") ?? "";
+      assert.match(text, /"status":"failed"/);
+      assertDelegateOutcome(result.stdout, "failed");
+      assert.match(text, /Delegate requested exact model/);
+      assert.equal(requests.length, 2, "only the parent contacted the provider");
+      assert.ok(requests.every((request) => request.depth === "0"));
+    }, "delegate");
+  }
 });
 
 test("real Pi CLI expands a native skill command and starts warning-free with only codemode", { skip: process.platform === "win32", timeout: 30000 }, async () => {

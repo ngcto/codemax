@@ -32,7 +32,7 @@ Do not load another custom codemode executor. With `--tools`, include `codemode`
 ## Important
 
 - Bundled instructions stay unchanged. Extend with `capability` or evidence-backed `learn`.
-- Delegates default to read-only; writes require isolated worktrees. No automatic pushes or merges.
+- Delegates reuse their model provider and default to read-only; writes require isolated worktrees. No automatic pushes or merges.
 - Browser/desktop drivers need separate setup. Installation, paid services, and external writes require approval.
 - Guards are **not an OS sandbox**. Project resources require Pi trust.
 

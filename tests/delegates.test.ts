@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import type { ExtensionAPI, ExtensionToolContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionToolContext, SlashCommandInfo, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { Delegates, DelegateOutput, Limiter, resolveModel } from "../src/delegates.ts";
 import { Configuration } from "../src/config.ts";
@@ -20,7 +20,8 @@ async function harness() {
   const config = new Configuration();
   config.session = { maxDelegates: 2, budget: "unlimited", roles: { "arena runners": ["faux/gpt-test", "faux/claude-test"], "arena cross-judge pool": ["faux/grok-test"] } };
   const tools = new Map<string, ToolDefinition>();
-  const pi = { registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool) } as unknown as ExtensionAPI;
+  const commands: SlashCommandInfo[] = [];
+  const pi = { registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool), getCommands: () => commands, getAllTools: () => [] } as unknown as ExtensionAPI;
   const ctx = { cwd, tools: [{ name: "bash" }], model: base, isProjectTrusted: () => true, modelRegistry: { getAvailable: () => [base, second, third] }, async executeTool(name: string, input: { command: string; timeout?: number }, options?: { signal?: AbortSignal }) {
     assert.equal(name, "bash");
     const r = await runShell(input.command, { cwd, signal: options?.signal, timeoutMs: (input.timeout ?? 30) * 1000 });
@@ -28,7 +29,7 @@ async function harness() {
   } } as unknown as ExtensionToolContext;
   const delegates = new Delegates(pi, config);
   delegates.register();
-  return { cwd, ctx, delegates, tools };
+  return { cwd, ctx, delegates, tools, pi, commands };
 }
 
 function withEnv(values: Record<string, string>): () => void {
@@ -64,8 +65,49 @@ test("fresh delegate process receives scoped policy, supported effort and no Sla
     assert.match(await readFile(result.transcript, "utf8"), /message_end/);
     const failed = await h.delegates.run({ task: "FAIL" }, h.ctx);
     assert.equal(failed.status, "failed");
+    const failure = await h.tools.get("delegate")!.execute("call", { task: "FAIL" }, undefined, undefined, h.ctx);
+    assert.equal(failure.isError, true);
+    assert.equal((failure.structuredContent as { status: string }).status, "failed");
     const timeout = await h.delegates.run({ task: "WAIT", timeout: 0.1 }, h.ctx);
     assert.equal(timeout.status, "timeout");
+  } finally { restore(); }
+});
+
+test("delegates preserve the selected custom provider entry point and API", async () => {
+  const restore = withEnv({ CODEMAX_PI_BINARY: fixture });
+  try {
+    const h = await harness();
+    const entry = join(h.cwd, "provider.ts");
+    await writeFile(entry, 'export default function(pi) { pi.registerProvider("custom-proxy", {}); }');
+    const model = { ...base, provider: "custom-proxy", api: "custom-codex-responses" };
+    Object.assign(h.ctx, { model });
+    Object.assign(h.ctx.modelRegistry, { getAvailable: () => [model], getRegisteredProviderConfig: () => ({ api: model.api, apiKey: "private-fixture-key", streamSimple() {} }) });
+    h.commands.push({ name: "custom-proxy-refresh", source: "extension", sourceInfo: { path: entry, source: "local", scope: "user", origin: "top-level" } });
+    const result = await h.delegates.run({ task: "inspect" }, h.ctx);
+    assert.equal(result.status, "complete");
+    assert.equal(result.model, "custom-proxy/gpt-test");
+    const message = JSON.parse(result.output) as { args: string[] };
+    assert.ok(message.args.includes("--no-extensions"));
+    assert.ok(message.args.includes(entry), "load the provider explicitly without ambient extensions");
+    assert.equal(message.args[message.args.indexOf("--model") + 1], result.model);
+    assert.ok(!message.args.some((arg) => arg.includes("private-fixture-key")));
+  } finally { restore(); }
+});
+
+test("delegates reject ambiguous or missing custom provider sources before spawning", async () => {
+  const restore = withEnv({ CODEMAX_PI_BINARY: fixture });
+  try {
+    const h = await harness();
+    const model = { ...base, provider: "runtime-only" };
+    Object.assign(h.ctx, { model });
+    Object.assign(h.ctx.modelRegistry, { getAvailable: () => [model], getRegisteredProviderConfig: () => ({}) });
+    await assert.rejects(h.delegates.run({ task: "inspect" }, h.ctx), /CODEMAX_PROVIDER_EXTENSIONS/);
+    for (const name of ["one", "two"]) {
+      const path = join(h.cwd, name + ".ts");
+      await writeFile(path, 'export default function(pi) { pi.registerProvider("runtime-only", {}); }');
+      h.commands.push({ name, source: "extension", sourceInfo: { path, source: "local", scope: "user", origin: "top-level" } });
+    }
+    await assert.rejects(h.delegates.run({ task: "inspect" }, h.ctx), /Ambiguous delegate provider/);
   } finally { restore(); }
 });
 

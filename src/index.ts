@@ -6,6 +6,7 @@ import { createCodemodeLoadout } from "./codemode.ts";
 import { Configuration, parseConfig } from "./config.ts";
 import { registerControl } from "./control.ts";
 import { Delegates } from "./delegates.ts";
+import { registerDelegateModelGuard } from "./delegate-providers.ts";
 import { registerGuards } from "./guard.ts";
 import { registerAsk } from "./interactions.ts";
 import { registerHistory } from "./history.ts";
@@ -39,6 +40,7 @@ export default function codemax(pi: ExtensionAPI): void {
   registerSettings(pi, config, (ctx) => web.update(ctx));
   web.register();
   registerGuards(pi);
+  registerDelegateModelGuard(pi);
 
   const activate = () => loadout.activate();
   const restore = async (ctx: ExtensionContext) => {

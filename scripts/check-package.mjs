@@ -10,7 +10,7 @@ const manifest = JSON.parse(execFileSync(process.platform === "win32" ? "npm.cmd
 }));
 assert.equal(manifest.length, 1, "Expected one package");
 const paths = manifest[0].files.map((file) => file.path);
-const required = ["package.json", "README.md", "LICENSE", "NOTICE.md", "src/index.ts", "src/codemode.ts", "resources/PI_BINDING.md", "resources/skills/ultracode/SKILL.md", "resources/skills/deslop/SKILL.md", "resources/skills/control-cli/SKILL.md", "resources/skills/control-ui/SKILL.md", "resources/skills/browser-use/SKILL.md", "resources/skills/cua-driver/SKILL.md"];
+const required = ["package.json", "README.md", "LICENSE", "NOTICE.md", "src/index.ts", "src/codemode.ts", "src/delegate-providers.ts", "resources/PI_BINDING.md", "resources/skills/ultracode/SKILL.md", "resources/skills/deslop/SKILL.md", "resources/skills/control-cli/SKILL.md", "resources/skills/control-ui/SKILL.md", "resources/skills/browser-use/SKILL.md", "resources/skills/cua-driver/SKILL.md"];
 for (const path of required) assert.ok(paths.includes(path), "Missing package resource: " + path);
 const forbidden = paths.filter((path) =>
   path.startsWith("tests/") ||

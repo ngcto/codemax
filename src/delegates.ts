@@ -9,6 +9,7 @@ import { instructions, resource } from "./catalog.ts";
 import { Configuration } from "./config.ts";
 import { bashData, hostShell } from "./control.ts";
 import { dataResult, dataSchema, emptyUsage, addUsage, boundedText } from "./output.ts";
+import { delegateProviderLoadout } from "./delegate-providers.ts";
 import { packageRoot, bundleRoot } from "./paths.ts";
 import { runProcess, shellQuote } from "./process.ts";
 import { enumSchema } from "./schema.ts";
@@ -102,6 +103,7 @@ export class Delegates {
     const readOnly = task.readOnly ?? true;
     if (!readOnly && !task.isolate) throw new Error("Writable delegates require isolate=true so independent workers never share a checkout.");
     return this.limiter.run(config.maxDelegates ?? 4, signal, async () => {
+      const provider = await delegateProviderLoadout(this.pi, ctx, model, signal);
       const dir = await mkdtemp(join(tmpdir(), "codemax-delegate-"));
       let cwd = ctx.cwd, worktree: string | undefined;
       if (task.isolate) {
@@ -121,7 +123,7 @@ export class Delegates {
       const body = ["# Delegate contract", "You own only this assigned slice. Do not post to chat/tickets, push, merge, deploy, or modify bundled instructions. Return observations with paths, commands, evidence, uncertainties, and an actionable result. A self-report is not verification.", task.allowDelegation ? "You may spawn bounded nested workers only for the brief's assigned scope. Depth and concurrency caps still apply." : "Nested delegation is forbidden. Own the assigned implementation directly when a playbook ordinarily delegates it. Do not wait or stand by for an agent you cannot spawn.", readOnly ? "Read-only investigation. Do not change files or external state." : "Work in the assigned isolated checkout. Keep all file writes inside it. Commit verified changes locally and report commit hashes. Do not push or merge.", profile, posture, extra].filter(Boolean).join("\n\n");
       await Promise.all([writeFile(policy, body, { mode: 0o600 }), writeFile(prompt, task.task, { mode: 0o600 })]);
       const shell = hostShell(ctx);
-      const args = ["--mode", "json", "--print", "--no-session", "--no-extensions", "--extension", "builtin:mcp", "--extension", join(packageRoot, "src", "index.ts"), "--skill", join(packageRoot, "resources", "skills"), "--model", model.provider + "/" + model.id, "--tools", readOnly ? "read," + shell + ",grep,find,ls,codemode" : "read," + shell + ",edit,write,grep,find,ls,codemode", "--append-system-prompt", policy];
+      const args = ["--mode", "json", "--print", "--no-session", "--no-extensions", ...provider.paths.flatMap((path) => ["--extension", path]), "--extension", "builtin:mcp", "--extension", join(packageRoot, "src", "index.ts"), "--skill", join(packageRoot, "resources", "skills"), "--model", model.provider + "/" + model.id, "--tools", readOnly ? "read," + shell + ",grep,find,ls,codemode" : "read," + shell + ",edit,write,grep,find,ls,codemode", "--append-system-prompt", policy];
       if (ctx.isProjectTrusted()) args.push("--approve"); else args.push("--no-approve");
       const requestedEffort = { small: "medium", medium: "high", large: "xhigh", unlimited: "max" }[config.budget ?? "medium"] as "medium" | "high" | "xhigh" | "max";
       const effort = clampThinkingLevel(model, requestedEffort);
@@ -129,7 +131,7 @@ export class Delegates {
       const invocation = piInvocation(args);
       const output = new DelegateOutput();
       const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/SLACK|WEBHOOK|SENDER_KEY|BOT_TOKEN/i.test(key)));
-      const result = await runProcess(invocation.command, invocation.args, { cwd, signal, timeoutMs: (task.timeout ?? 900) * 1000, env: { ...env, CODEMAX_DELEGATE_DEPTH: String(depth + 1), CODEMAX_READONLY: readOnly ? "1" : "0", CODEMAX_ALLOW_DELEGATION: task.allowDelegation ? "1" : "0", CODEMAX_WORKTREE: worktree, CODEMAX_PARENT_CWD: resolve(ctx.cwd), CODEMAX_SESSION_CONFIG: JSON.stringify(config) }, onStdout: (chunk) => output.consume(chunk) });
+      const result = await runProcess(invocation.command, invocation.args, { cwd, signal, timeoutMs: (task.timeout ?? 900) * 1000, env: { ...env, CODEMAX_DELEGATE_DEPTH: String(depth + 1), CODEMAX_READONLY: readOnly ? "1" : "0", CODEMAX_ALLOW_DELEGATION: task.allowDelegation ? "1" : "0", CODEMAX_WORKTREE: worktree, CODEMAX_PARENT_CWD: resolve(ctx.cwd), CODEMAX_SESSION_CONFIG: JSON.stringify(config), CODEMAX_PROVIDER_EXTENSIONS: provider.environment, CODEMAX_DELEGATE_MODEL: JSON.stringify({ provider: model.provider, id: model.id, api: model.api, baseUrl: model.baseUrl, extension: provider.paths.length > 0 }) }, onStdout: (chunk) => output.consume(chunk) });
       output.finish();
       const status = result.aborted ? "aborted" : result.timedOut ? "timeout" : result.exitCode === 0 && output.stopReason === "stop" && !output.error ? "complete" : "failed";
       const bounded = await boundedText(output.text || output.error || result.stderr || "No final assistant output.", "delegate");
@@ -138,7 +140,7 @@ export class Delegates {
   }
   register(): void {
     const taskSchema = Type.Object({ task: Type.String({ minLength: 1 }), model: Type.Optional(Type.String()), role: Type.Optional(Type.String()), skill: Type.Optional(Type.String()), agent: Type.Optional(enumSchema(["ultracode-agent", "comment-sicko"])), readOnly: Type.Optional(Type.Boolean()), isolate: Type.Optional(Type.Boolean()), allowDelegation: Type.Optional(Type.Boolean()), timeout: Type.Optional(Type.Number({ minimum: 1, maximum: 14400 })) });
-    this.pi.registerTool({ name: "delegate", label: "Delegate", exposure: "codemode", description: "Run a fresh Pi agent with isolated context, codemode-only tools, verified model selection, cancellation, bounded output and transcript artifact. Writable workers require an isolated clean Git worktree; results are never auto-merged. Batch independent slices with Promise.allSettled, chain by passing prior artifacts, or use panel for bakeoffs/review.", parameters: taskSchema, outputSchema: dataSchema, execute: async (_id, task, signal, _update, ctx) => { const result = await this.run(task, ctx, signal); return dataResult(result, result.usage); } });
+    this.pi.registerTool({ name: "delegate", label: "Delegate", exposure: "codemode", description: "Run a fresh Pi agent with isolated context, codemode-only tools, verified model selection, cancellation, bounded output and transcript artifact. Writable workers require an isolated clean Git worktree; results are never auto-merged. Batch independent slices with Promise.allSettled, chain by passing prior artifacts, or use panel for bakeoffs/review.", parameters: taskSchema, outputSchema: dataSchema, execute: async (_id, task, signal, _update, ctx) => { const result = await this.run(task, ctx, signal); return { ...dataResult(result, result.usage), ...(result.status === "complete" ? {} : { isError: true }) }; } });
     this.pi.registerTool({
       name: "panel", label: "Panel", exposure: "codemode", description: "Parallel arena, swarm, architect, interrogate, how, why or reflection panel. Candidates have fresh contexts and explicit models. Writable candidates get disjoint worktrees. Returns every result/failure and optionally an independent cross-model judge; never grafts or merges a candidate automatically.",
       parameters: Type.Object({ mode: enumSchema(["arena", "swarm", "architect", "interrogate", "how", "why", "reflect"]), tasks: Type.Array(taskSchema, { minItems: 1, maxItems: 8 }), rubric: Type.Optional(Type.String()), judge: Type.Optional(Type.Boolean()), judgeModel: Type.Optional(Type.String()) }), outputSchema: dataSchema,

@@ -29,6 +29,14 @@ Tool changes appear next script. `capability(action="run")` executes a saved too
 
 Select available models through `settings`. Omitted roles inherit the parent. Nested delegation requires `allowDelegation:true`. Writable workers require `readOnly:false,isolate:true` and a clean committed baseline. Workers return local commits; the lead reviews, verifies, and integrates.
 
+Workers load their selected model's provider entry point while keeping unrelated extensions out. The exact provider, model ID, API, and configured endpoint must match the parent selection. Credentials remain in Pi's credential store and provider configuration.
+
+If source discovery is ambiguous, set `CODEMAX_PROVIDER_EXTENSIONS` before starting Pi. Map provider IDs to reviewed local entry points:
+
+```sh
+export CODEMAX_PROVIDER_EXTENSIONS='{"provider-id":"/absolute/path/to/provider/index.ts"}'
+```
+
 Session settings and workflow state follow the active branch. Project/global files persist independently. Project resources require Pi trust.
 
 ## Approval
