@@ -5,6 +5,7 @@ import type { ExtensionAPI, ExtensionContext, ExtensionToolContext, ToolDefiniti
 import { Configuration } from "../src/config.ts";
 import { WebClients } from "../src/web/client.ts";
 import { WebTools } from "../src/web/tools.ts";
+import { webProviders } from "../src/web/providers.ts";
 
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; }
 function mcpFetch(intercept?: (method: string, signal: AbortSignal | null | undefined) => Promise<unknown>): typeof fetch {
@@ -116,18 +117,50 @@ function webHarness(clients: WebClients, native = false) {
   const definitions = new Map<string, ToolDefinition>();
   const pi = { registerTool: (tool: ToolDefinition) => definitions.set(tool.name, tool), registerProvider() {}, on() {} } as unknown as ExtensionAPI;
   const config = new Configuration();
-  config.session = { web: { enabled: ["exa", "firecrawl"], native, nativeInConversation: false } };
+  config.session = { web: { enabled: ["exa", "parallel"], native, nativeInConversation: false } };
   const web = new WebTools(pi, config, clients); web.register();
   const ctx = { cwd: "/tmp", isProjectTrusted: () => false, model: { id: "gpt-5.4", provider: "openai", api: "openai-responses", baseUrl: "https://api.openai.com/v1" }, modelRegistry: { getApiKeyAndHeaders: async () => ({ ok: true }), getProviderAuth: async () => undefined, streamSimple: () => ({ result: async () => ({ stopReason: "error", errorMessage: "native not enabled for account", content: [] }) }) } } as unknown as ExtensionToolContext;
   return { definitions, ctx };
 }
 
 test("all-page fetch failure preserves provider diagnostics instead of hiding keyless rejection", async () => {
-  const clients = new WebClients(mcpFetch(async (method) => method === "tools/list" ? { tools: [{ name: "firecrawl_scrape", inputSchema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] } }] }
+  const clients = new WebClients(mcpFetch(async (method) => method === "tools/list" ? { tools: [{ name: "crawling_exa", inputSchema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] } }] }
     : method === "tools/call" ? { isError: true, content: [{ type: "text", text: "Anonymous keyless access is unavailable for this request." }] } : undefined));
   const { definitions, ctx } = webHarness(clients);
   try {
-    await assert.rejects(definitions.get("fetch")!.execute("call", { urls: ["https://example.com"], provider: "firecrawl" }, undefined, undefined, ctx), /Anonymous keyless access is unavailable.*\n.*\/login firecrawl/);
+    await assert.rejects(definitions.get("fetch")!.execute("call", { urls: ["https://example.com"], provider: "exa" }, undefined, undefined, ctx), /Anonymous keyless access is unavailable.*\n.*\/login exa/);
+  } finally { await clients.close(); }
+});
+
+test("hosted search and fetch fall back from Exa directly to Parallel with diagnostics", async () => {
+  const calls: { provider: string; name: string }[] = [];
+  const clients = new WebClients(async (input, init) => {
+    const provider = String(input) === webProviders.exa.anonymousUrl ? "exa" : "parallel";
+    assert.equal(String(input), webProviders[provider].anonymousUrl);
+    const request = init?.body ? JSON.parse(String(init.body)) : undefined;
+    const search = provider === "exa"
+      ? { name: "web_search_exa", inputSchema: { type: "object", properties: { query: { type: "string" }, objective: { type: "string" } }, required: ["query"] } }
+      : { name: "web_search", inputSchema: { type: "object", properties: { objective: { type: "string" }, search_queries: { type: "array", items: { type: "string" } } }, required: ["objective", "search_queries"] } };
+    const fetch = { name: provider === "exa" ? "web_fetch_exa" : "web_fetch", inputSchema: { type: "object", properties: { urls: { type: "array", items: { type: "string" } } }, required: ["urls"] } };
+    return mcpFetch(async (method) => {
+      if (method === "tools/list") return { tools: [search, fetch] };
+      if (method === "tools/call") {
+        calls.push({ provider, name: request.params.name });
+        return { ...(provider === "exa" ? { isError: true } : {}), content: [{ type: "text", text: provider === "exa" ? "fixture Exa unavailable" : "parallel proof" }] };
+      }
+    })(input, init);
+  });
+  const { definitions, ctx } = webHarness(clients);
+  try {
+    for (const [name, input] of [["search", { query: "release notes", provider: "auto" }], ["fetch", { urls: ["https://example.com"], provider: "auto" }]] as const) {
+      const result = await definitions.get(name)!.execute("call", input, undefined, undefined, ctx);
+      const value = result.structuredContent as { provider: string; failures: { provider: string; error: string }[] };
+      assert.equal(value.provider, "parallel");
+      assert.equal(value.failures.length, 1);
+      assert.equal(value.failures[0]?.provider, "exa");
+      assert.match(value.failures[0]?.error ?? "", /fixture Exa unavailable/);
+    }
+    assert.deepEqual(calls, [{ provider: "exa", name: "web_search_exa" }, { provider: "parallel", name: "web_search" }, { provider: "exa", name: "web_fetch_exa" }, { provider: "parallel", name: "web_fetch" }]);
   } finally { await clients.close(); }
 });
 

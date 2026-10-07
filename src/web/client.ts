@@ -94,17 +94,13 @@ export function buildSearchArgs(spec: WebProviderSpec, tool: Tool, input: { quer
   const limit = input.limit ?? 8;
   const candidates: Record<string, unknown> = spec.id === "exa"
     ? { query: input.query, objective: input.objective ?? input.query, numResults: limit, type: "auto" }
-    : spec.id === "firecrawl"
-      ? { query: input.query, objective: input.objective ?? input.query, limit, scrapeOptions: { formats: ["markdown"] } }
-      : { objective: input.objective ?? input.query, query: input.query, search_queries: [input.query], searchQueries: [input.query], max_results: limit, maxResults: limit, mode: "basic" };
+    : { objective: input.objective ?? input.query, query: input.query, search_queries: [input.query], searchQueries: [input.query], max_results: limit, maxResults: limit, mode: "basic" };
   return Object.fromEntries(Object.entries(candidates).filter(([name]) => name in properties));
 }
 export function buildFetchArgs(spec: WebProviderSpec, tool: Tool, urls: string[], maxCharacters: number): Record<string, unknown> {
   const properties = (tool.inputSchema.properties ?? {}) as Record<string, unknown>;
   const candidates: Record<string, unknown> = spec.id === "exa"
     ? { urls, url: urls[0], maxCharacters, maxCharactersPerUrl: maxCharacters }
-    : spec.id === "firecrawl"
-      ? { url: urls[0], formats: ["markdown"], onlyMainContent: true }
-      : { urls, url: urls[0], maxCharacters, max_characters: maxCharacters, full_content: true, objective: "Read the requested pages and preserve their relevant content.", advanced_settings: { full_content: true } };
+    : { urls, url: urls[0], maxCharacters, max_characters: maxCharacters, full_content: true, objective: "Read the requested pages and preserve their relevant content.", advanced_settings: { full_content: true } };
   return Object.fromEntries(Object.entries(candidates).filter(([name]) => name in properties));
 }

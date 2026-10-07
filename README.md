@@ -51,9 +51,9 @@ Do not load another custom codemode executor. With `--tools`, include `codemode`
 
 ## Web
 
-- Default `auto`: native GPT/Grok search when supported; otherwise **Exa → Firecrawl → Parallel**.
-- Login: `/login exa`, `/login firecrawl`, `/login parallel`.
-- Anonymous access is provider-controlled; Firecrawl may require credentials.
+- Default `auto`: native GPT/Grok search when supported; otherwise **Exa → Parallel**.
+- Login: `/login exa` or `/login parallel`.
+- Anonymous access and quotas are provider-controlled.
 
 ## Development
 

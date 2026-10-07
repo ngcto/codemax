@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { Configuration } from "../src/config.ts";
+import { Value } from "typebox/value";
+import { Configuration, defaults, parseConfig, providerIds } from "../src/config.ts";
 import { WebClients, buildSearchArgs, buildFetchArgs } from "../src/web/client.ts";
 import { WebTools } from "../src/web/tools.ts";
 import { nativeFamily, addNativeTools, nativeToolSpecs } from "../src/web/native.ts";
@@ -32,6 +33,29 @@ test("native tools are family and wire-protocol constrained, additive and idempo
   const azure = { ...gpt, provider: "azure", api: "azure-openai-responses", baseUrl: "https://fixture.openai.azure.com/openai/v1" };
   assert.deepEqual((addNativeTools({ model: "deployment-alias", tools: [] }, azure) as { tools: unknown[] }).tools, [{ type: "web_search" }]);
   assert.equal(addNativeTools(payload, { ...gpt, provider: "anthropic" }), undefined);
+});
+
+test("hosted web settings, registrations and tool schemas support only Exa and Parallel", () => {
+  assert.deepEqual(providerIds, ["exa", "parallel"]);
+  assert.deepEqual(defaults.web?.enabled, ["exa", "parallel"]);
+  assert.deepEqual(Object.keys(webProviders), ["exa", "parallel"]);
+  assert.deepEqual(parseConfig({ web: { default: "parallel", enabled: ["exa", "parallel"] } }).web?.enabled, ["exa", "parallel"]);
+  assert.throws(() => parseConfig({ web: { default: "unsupported-provider" } }), /Invalid codemax configuration/);
+  assert.throws(() => parseConfig({ web: { enabled: ["exa", "unsupported-provider"] } }), /Invalid codemax configuration/);
+  const registered: string[] = [];
+  const tools = new Map<string, ToolDefinition>();
+  const api = { registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool), registerProvider: (provider: { id: string }) => registered.push(provider.id), on() {} } as unknown as ExtensionAPI;
+  new WebTools(api, new Configuration()).register();
+  assert.deepEqual(registered, ["exa", "parallel"]);
+  for (const provider of providerIds) {
+    assert.equal(Value.Check(tools.get("search")!.parameters, { query: "test", provider }), true);
+    assert.equal(Value.Check(tools.get("fetch")!.parameters, { urls: ["https://example.com"], provider }), true);
+    assert.equal(Value.Check(tools.get("web")!.parameters, { action: "tools", provider }), true);
+  }
+  for (const [name, providers] of Object.entries({ search: ["exa", "parallel", "native", "auto"], fetch: ["exa", "parallel", "auto"], web: ["exa", "parallel"] })) {
+    const schema = tools.get(name)!.parameters as { properties: { provider: { enum: string[] } } };
+    assert.deepEqual(schema.properties.provider.enum, providers);
+  }
 });
 
 test("provider login registrations have no fake chat models and enforce OAuth state", () => {
@@ -81,13 +105,17 @@ test("MCP clients use anonymous, API-key, and OAuth endpoints without prefixing 
   } finally { await clients.close(); }
 });
 
-test("provider adapters use advertised schemas, including Firecrawl single-page fetch", () => {
+test("provider adapters use advertised search and batched or single-page fetch schemas", () => {
   const exa = { name: "web_search_exa", inputSchema: { properties: { query: {}, objective: {}, numResults: {} } } };
   assert.deepEqual(buildSearchArgs(webProviders.exa, exa, { query: "Q", limit: 3 }), { query: "Q", objective: "Q", numResults: 3 });
   const parallel = { name: "web_search", inputSchema: { properties: { objective: {}, search_queries: {}, max_results: {} } } };
   assert.deepEqual(buildSearchArgs(webProviders.parallel, parallel, { query: "Q" }), { objective: "Q", search_queries: ["Q"], max_results: 8 });
-  const fire = { name: "firecrawl_scrape", inputSchema: { properties: { url: {}, formats: {}, onlyMainContent: {} } } };
-  assert.deepEqual(buildFetchArgs(webProviders.firecrawl, fire, ["https://example.com"], 500), { url: "https://example.com", formats: ["markdown"], onlyMainContent: true });
+  const exaFetch = { name: "web_fetch_exa", inputSchema: { properties: { urls: {}, maxCharactersPerUrl: {} } } };
+  assert.deepEqual(buildFetchArgs(webProviders.exa, exaFetch, ["https://example.com"], 500), { urls: ["https://example.com"], maxCharactersPerUrl: 500 });
+  const single = { name: "crawling_exa", inputSchema: { properties: { url: {}, maxCharacters: {} } } };
+  assert.deepEqual(buildFetchArgs(webProviders.exa, single, ["https://example.com"], 500), { url: "https://example.com", maxCharacters: 500 });
+  const parallelFetch = { name: "web_fetch", inputSchema: { properties: { urls: {}, objective: {}, advanced_settings: {} } } };
+  assert.deepEqual(buildFetchArgs(webProviders.parallel, parallelFetch, ["https://example.com"], 500), { urls: ["https://example.com"], objective: "Read the requested pages and preserve their relevant content.", advanced_settings: { full_content: true } });
 });
 
 test("GPT replaces script search, Grok restores it and adds X, other models remove native-only X", async () => {
@@ -125,7 +153,8 @@ test("real Pi exposes short web-provider login labels before and after reload", 
   const h = await testSession();
   try {
     const check = () => {
-      for (const [id, name] of [["exa", "Exa"], ["firecrawl", "Firecrawl"], ["parallel", "Parallel"]] as const) {
+      assert.deepEqual(new Set(h.runtime.getRegisteredProviderIds()), new Set(["faux", "exa", "parallel"]));
+      for (const [id, name] of [["exa", "Exa"], ["parallel", "Parallel"]] as const) {
         const provider = h.runtime.getProvider(id);
         assert.equal(provider?.name, name);
         assert.equal(provider?.auth.oauth?.name, name + " OAuth");

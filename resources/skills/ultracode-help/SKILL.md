@@ -16,7 +16,7 @@ Answer the question. Link the relevant bundled file and give the next command. S
 - [deslop](../deslop/SKILL.md) cleans code; [unslop](../unslop/SKILL.md) cleans prose.
 - [control-ui](../control-ui/SKILL.md) selects browser-use or cua-driver. [control-cli](../control-cli/SKILL.md) uses repo-native harnesses, tmux, and PTY probes.
 - `verify` records repro and test evidence. `script(action="list")` lists PR-watching, orchestration, and audit scripts.
-- `search` and `fetch` use Exa, Firecrawl, or Parallel. `/login <provider>` enables account-backed access. Native GPT/Grok search depends on the selected route.
+- `search` and `fetch` use Exa or Parallel. `/login <provider>` enables account-backed access. Native GPT/Grok search depends on the selected route.
 - `capability` saves JavaScript tools. `learn` saves evidence-backed skills; `recall` and `history` retrieve prior work.
 - `automation` runs bounded Benny triage/repro rounds.
 

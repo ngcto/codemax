@@ -6,7 +6,7 @@ import { readJson, updateJson } from "./storage.ts";
 import { enumSchema } from "./schema.ts";
 import type { BranchState } from "./state.ts";
 
-export const providerIds = ["exa", "firecrawl", "parallel"] as const;
+export const providerIds = ["exa", "parallel"] as const;
 export type WebProviderId = typeof providerIds[number];
 const roleValue = Type.Union([Type.String(), Type.Array(Type.String(), { minItems: 1, maxItems: 8 })]);
 export const configSchema = Type.Object({
