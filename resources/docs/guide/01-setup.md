@@ -7,7 +7,7 @@ In this page you install the extension, pick which models codemax uses, and run 
 In a terminal, run:
 
 ```text
-pi install /path/to/codemax
+pi install git:github.com/ngcto/codemax
 ```
 
 Restart Pi or run `/reload`. For a one-session development load, run `pi -e /path/to/codemax/src/index.ts`.
