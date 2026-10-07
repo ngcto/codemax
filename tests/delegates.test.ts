@@ -8,6 +8,7 @@ import type { ExtensionAPI, ExtensionToolContext, SlashCommandInfo, ToolDefiniti
 import type { Model } from "@earendil-works/pi-ai";
 import { Delegates, DelegateOutput, Limiter, resolveModel } from "../src/delegates.ts";
 import { Configuration } from "../src/config.ts";
+import { reservedTools } from "../src/capabilities.ts";
 import { runProcess, runShell } from "../src/process.ts";
 
 const fixture = fileURLToPath(new URL("./fixtures/fake-pi.mjs", import.meta.url));
@@ -56,6 +57,8 @@ test("fresh delegate process receives scoped policy, supported effort and no Sla
     const message = JSON.parse(result.output) as { args: string[]; commentProfile: boolean; hasSlackSecret: boolean; nested: string; cwd: string; readonly: string };
     assert.ok(message.args.includes("--no-extensions"));
     assert.ok(message.args.includes("builtin:mcp"));
+    const tools = message.args[message.args.indexOf("--tools") + 1]!.split(",");
+    assert.deepEqual(new Set(tools), new Set([...reservedTools].filter((name) => !["edit", "write", "powershell"].includes(name))));
     assert.equal(message.args[message.args.indexOf("--thinking") + 1], "high");
     assert.equal(message.commentProfile, true);
     assert.equal(message.hasSlackSecret, false);
@@ -70,6 +73,17 @@ test("fresh delegate process receives scoped policy, supported effort and no Sla
     assert.equal((failure.structuredContent as { status: string }).status, "failed");
     const timeout = await h.delegates.run({ task: "WAIT", timeout: 0.1 }, h.ctx);
     assert.equal(timeout.status, "timeout");
+  } finally { restore(); }
+});
+
+test("delegate tools retain codemax operations with the selected PowerShell host", async () => {
+  const restore = withEnv({ CODEMAX_PI_BINARY: fixture });
+  try {
+    const h = await harness();
+    Object.assign(h.ctx, { tools: [{ name: "powershell" }] });
+    const result = await h.delegates.run({ task: "inspect" }, h.ctx);
+    const { args } = JSON.parse(result.output) as { args: string[] };
+    assert.deepEqual(new Set(args[args.indexOf("--tools") + 1]!.split(",")), new Set([...reservedTools].filter((name) => !["edit", "write", "bash"].includes(name))));
   } finally { restore(); }
 });
 
@@ -123,10 +137,12 @@ test("writable delegate requires a clean isolated baseline and leaves the parent
     const result = await h.delegates.run({ task: "candidate", readOnly: false, isolate: true, agent: "ultracode-agent" }, h.ctx);
     assert.equal(result.status, "complete");
     assert.ok(result.worktree && result.worktree !== h.cwd);
-    const message = JSON.parse(result.output) as { cwd: string; ultracodeProfile: boolean; readonly: string };
+    const message = JSON.parse(result.output) as { args: string[]; cwd: string; ultracodeProfile: boolean; readonly: string };
     assert.equal(message.cwd, result.worktree);
     assert.equal(message.ultracodeProfile, true);
     assert.equal(message.readonly, "0");
+    const tools = message.args;
+    assert.deepEqual(new Set(tools[tools.indexOf("--tools") + 1]!.split(",")), new Set([...reservedTools].filter((name) => name !== "powershell")));
     assert.equal(await readFile(join(result.worktree, "baseline.txt"), "utf8"), "parent");
     assert.equal(await readFile(join(h.cwd, "baseline.txt"), "utf8"), "parent");
     await writeFile(join(h.cwd, "uncommitted.txt"), "dirty");

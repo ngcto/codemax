@@ -27,8 +27,8 @@ async function withCliFixture(run: (fixture: CliFixture) => Promise<void>, mode:
     const depth = String(req.headers["x-fixture-depth"] ?? "0");
     requests.push({ ...JSON.parse(body), depth, fixtureProvider: req.headers["x-fixture-provider"] });
     res.writeHead(200, { "content-type": "text/event-stream" });
-    const first = depth === "0" && requests.filter((request) => request.depth === "0").length === 1;
-    const code = mode === "delegate" ? 'return await tools.delegate({task:"Reply exactly: provider-worker-ok",readOnly:true,timeout:20});' : 'return await tools.verify({command:"pwd",label:"real CLI nested proof"});';
+    const first = requests.filter((request) => request.depth === depth).length === 1;
+    const code = mode === "delegate" && depth === "0" ? 'return await tools.delegate({task:"Run the exact local proof, then reply provider-worker-ok",readOnly:true,timeout:20});' : 'return await tools.verify({command:"pwd",label:"real CLI nested proof"});';
     const delta = first ? { role: "assistant", tool_calls: [{ index: 0, id: "call_cli", type: "function", function: { name: "codemode", arguments: JSON.stringify({ code }) } }] } : { role: "assistant", content: depth === "0" ? "real-cli-ok" : "provider-worker-ok" };
     const chunk = (value: unknown) => res.write("data: " + JSON.stringify(value) + "\n\n");
     chunk({ id: "local-test", object: "chat.completion.chunk", created: 1, model: "local-test", choices: [{ index: 0, delta, finish_reason: null }] });
@@ -94,7 +94,12 @@ test("real Pi JSON-mode delegate loads fallback codemode and executes nested ver
       assert.ok(system.includes("Nested delegation is forbidden."));
       assert.ok(system.includes("# Remove AI code slop"));
       assert.ok(!system.includes("## Pi execution contract"));
-      assert.match(await readFile(result.transcript, "utf8"), /real CLI nested proof/);
+      const transcript = await readFile(result.transcript, "utf8");
+      assert.match(transcript, /real CLI nested proof/);
+      const proof = transcript.split("\n").flatMap((line) => { try { return [JSON.parse(line)]; } catch { return []; } }).find((event) => event.type === "tool_execution_end" && event.toolName === "verify");
+      assert.ok(proof, "the delegate actually executed verify, not merely attempted its name");
+      assert.equal(proof.isError, false);
+      assert.equal(proof.result.structuredContent.passed, true);
       assert.ok(result.usage.totalTokens >= 8);
     } finally {
       for (const [key, value] of Object.entries(original)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -120,8 +125,15 @@ test("real Pi delegates inherit an extension-backed provider without loading amb
     assertDelegateOutcome(result.stdout, "complete");
     assert.match(text, /"model":"cliproxyapi\/gpt-provider-fixture"/);
     assert.match(text, /"output":"provider-worker-ok"/);
-    assert.equal(requests.length, 3);
-    assert.equal(requests.filter((request) => request.depth === "1").length, 1);
+    const events = result.stdout.split("\n").flatMap((line) => { try { return [JSON.parse(line)]; } catch { return []; } });
+    const delegate = events.find((event) => event.type === "tool_execution_end" && event.toolName === "delegate");
+    const child = (await readFile(delegate.result.structuredContent.transcript, "utf8")).split("\n").flatMap((line) => { try { return [JSON.parse(line)]; } catch { return []; } });
+    const proof = child.find((event) => event.type === "tool_execution_end" && event.toolName === "verify");
+    assert.ok(proof, "the extension-backed child can execute codemax verification");
+    assert.equal(proof.isError, false);
+    assert.equal(proof.result.structuredContent.passed, true);
+    assert.equal(requests.length, 4);
+    assert.equal(requests.filter((request) => request.depth === "1").length, 2);
     for (const request of requests) {
       assert.equal(request.fixtureProvider, "cliproxyapi", "the custom stream implementation was used");
       assert.deepEqual(request.tools?.map((tool) => tool.function?.name), ["codemode"]);
