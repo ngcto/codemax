@@ -32,7 +32,7 @@ Each of these routes to its playbook ([Bug fix](../../skills/ultracode/playbooks
 
 For sustained improvement of one number, there's the [Hillclimb playbook](../../skills/ultracode/playbooks/hillclimb.md). Give it the metric, a target, and a floor on attempts, and it loops one hypothesis at a time with a frozen measurement harness. It keeps wins and reverts everything else.
 
-Both perf playbooks run [`/benchmark-checklist`](../../skills/benchmark-checklist/SKILL.md) on their numbers. Perf issue vets its baseline and every number after it, and Hillclimb vets its harness before freezing it. [Verify and ship](./06-verify-and-ship.md#vet-a-measured-number-with-benchmark-checklist) shows when to type it yourself.
+Both perf playbooks run [`/skill:benchmark-checklist`](../../skills/benchmark-checklist/SKILL.md) on their numbers. Perf issue vets its baseline and every number after it, and Hillclimb vets its harness before freezing it. [Verify and ship](./06-verify-and-ship.md#vet-a-measured-number-with-benchmark-checklist) shows when to type it yourself.
 
 Sometimes you want the cause before any fix. For a live symptom, such as a leak, an idle CPU spin, or a visual glitch, the [Runtime forensics playbook](../../skills/ultracode/playbooks/runtime-forensics.md) instruments the running process. For a profile you already captured, the [Trace forensics playbook](../../skills/ultracode/playbooks/trace-forensics.md) reads the artifact and maps the hot frame to source. Both return a diagnosis, not a fix:
 
@@ -40,19 +40,19 @@ Sometimes you want the cause before any fix. For a live symptom, such as a leak,
 /skill:ultracode here's a cpuprofile from the slow startup. tell me where the time goes and which source lines own it. no fix yet.
 ```
 
-## Write the failing test first with `/tdd`
+## Write the failing test first with `/skill:tdd`
 
 When a bug has a cheap local test path, the whole prompt can be two words:
 
 ```text
-/tdd implement
+/skill:tdd implement
 ```
 
-In context, that's enough. [`/tdd`](../../skills/tdd/SKILL.md) writes the smallest test that fails for the intended reason, then the fix, then reruns the test. If a test would need broad harness setup or brittle mocks, the skill says so and uses the closest executable check instead. Don't force a test where a real command is stronger evidence.
+In context, that's enough. [`/skill:tdd`](../../skills/tdd/SKILL.md) writes the smallest test that fails for the intended reason, then the fix, then reruns the test. If a test would need broad harness setup or brittle mocks, the skill says so and uses the closest executable check instead. Don't force a test where a real command is stronger evidence.
 
 ## Load the TypeScript rules by name
 
-[`typescript-best-practices`](../../skills/typescript-best-practices/SKILL.md) turns the type-system principles into concrete rules: discriminated unions, `unknown` at boundaries, exhaustive variants, schema-derived types. It doesn't load on its own, so type `/typescript-best-practices` when a task touches `.ts` or `.tsx` files.
+[`typescript-best-practices`](../../skills/typescript-best-practices/SKILL.md) turns the type-system principles into concrete rules: discriminated unions, `unknown` at boundaries, exhaustive variants, schema-derived types. It doesn't load on its own, so type `/skill:typescript-best-practices` when a task touches `.ts` or `.tsx` files.
 
 ## Clean before you commit
 
@@ -60,23 +60,23 @@ The [Opening a PR playbook](../../skills/ultracode/playbooks/opening-a-pr.md) ru
 
 Use `/skill:deslop <diff>` for a focused cleanup.
 
-For prose, `/unslop` takes a target and any extra rules you have:
+For prose, `/skill:unslop` takes a target and any extra rules you have:
 
 ```text
-/unslop the readme changes, no emdashes
+/skill:unslop the readme changes, no emdashes
 ```
 
 You'll develop your own shorthand. The skill reads intent fine from terse prompts like `unslop that, tighten it`.
 
-## Strip the comments with `/no-comments`
+## Strip the comments with `/skill:no-comments`
 
 Comments need their own pass, and not from the agent that wrote them. An author defends its comments the way you'd defend yours. So before review, hand them to fresh eyes:
 
 ```text
-/no-comments the diff
+/skill:no-comments the diff
 ```
 
-[`/no-comments`](../../skills/no-comments/SKILL.md) spawns [Comment Sicko](../../agents/comment-sicko.md), a read-only reviewer with a short keep list: license headers, doc comments on a public API, links that explain what code can't, behavior forced by an external dependency you can't reshape. Everything else goes. A surprise in your own code gets no such pass. The comment comes back as a refactor flag, and `/no-comments` fixes the flags it accepts at the root cause. When a comment claims a constraint, "do not remove", the skill offers to encode the claim as a type, test, or lint. Either way, the comment comes out.
+[`/skill:no-comments`](../../skills/no-comments/SKILL.md) spawns [Comment Sicko](../../agents/comment-sicko.md), a read-only reviewer with a short keep list: license headers, doc comments on a public API, links that explain what code can't, behavior forced by an external dependency you can't reshape. Everything else goes. A surprise in your own code gets no such pass. The comment comes back as a refactor flag, and `/skill:no-comments` fixes the flags it accepts at the root cause. When a comment claims a constraint, "do not remove", the skill offers to encode the claim as a type, test, or lint. Either way, the comment comes out.
 
 Use `deslop` for code, `unslop` for prose, and `no-comments` for an independent comment review.
 

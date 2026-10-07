@@ -14,7 +14,7 @@ async function files(dir: string): Promise<string[]> {
 }
 export function registerAutomations(pi: ExtensionAPI, delegates: Delegates): void {
   pi.registerTool({
-    name: "automation", label: "Automation", exposure: "codemode", executionMode: "sequential", description: "Ported Benny issue triage and reproduce/fix automation contracts. Describe them, scaffold a project-owned editable pack without overwriting local edits, or run one bounded delegate round on an exact report. No scheduler, credential setup, posting, merge, or deployment is silently enabled; the lead owns external writes and integration grants.",
+    name: "automation", label: "Automation", exposure: "codemode", executionMode: "sequential", description: "Read Benny triage/repro procedures, scaffold a project pack while preserving local edits, or run one bounded delegate round on an exact report. The lead performs external writes under the user's grant.",
     parameters: Type.Object({ action: enumSchema(["describe", "scaffold", "run"]), phase: Type.Optional(enumSchema(["triage", "reproduce"])), report: Type.Optional(Type.String()), configuration: Type.Optional(Type.String()), model: Type.Optional(Type.String()), timeout: Type.Optional(Type.Number({ minimum: 1, maximum: 14400 })) }), outputSchema: dataSchema,
     async execute(_id, params, signal, _update, ctx) {
       const source = join(bundleRoot, "automations", "benny");

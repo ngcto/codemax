@@ -38,7 +38,7 @@ export function safeName(value: string): string {
 
 export function safeToolName(value: string): string {
   if (!/^[a-z][a-z0-9_]{0,63}$/.test(value) || /^codemax(?:_|$)/.test(value)) {
-    throw new Error("Use an unprefixed lowercase tool name with letters, numbers, and underscores.");
+    throw new Error("Use a lowercase tool name with letters, numbers, and underscores.");
   }
   return value;
 }

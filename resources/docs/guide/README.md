@@ -2,19 +2,19 @@
 
 codemax works best when you stop micromanaging the agent. You describe what you want and how you'll know it's done. `/skill:ultracode` picks the playbook, runs the other skills as the steps need them, and shows you the evidence. This guide teaches that habit with realistic prompts.
 
-Pi automatically exposes skills as `/skill:<name>`, including `/skill:ultracode`, `/skill:setup-codemax`, and `/skill:ultracode-help`. Arguments after the command become the user request. Other short names such as `/how` and `/arena` in imported prose are workflow labels, not command aliases. From code, read a procedure with `workflow({action:"read",name:"how"})`. codemax registers no dedicated slash commands; use Pi's native skill commands.
+Use `/skill:<name> <request>`. From code, read a procedure with `workflow({action:"read",name:"how"})`.
 
 Here's what you'll learn:
 
 1. [Set up codemax](./01-setup.md). Install the plugin and pick your models.
 2. [Route work through `/skill:ultracode`](./02-ultracode.md). Give it a goal and watch it pick a playbook.
-3. [Understand the code](./03-understand.md). A read-only investigation, then `/how`, `/why`, `/teach`, and `/recall` before you edit anything.
-4. [Design the change](./04-design.md). `/architect`, `/arena`, `/swarm`, `/interrogate`, prototypes, and plans before code locks in a shape.
-5. [Build and clean the change](./05-build-and-clean.md). The build playbooks, `/tdd`, `/unslop`, and `/no-comments`.
-6. [Verify and ship](./06-verify-and-ship.md). Prove behavior on the real app, vet numbers with `/benchmark-checklist`, then open a focused PR and drive it to merged.
+3. [Understand the code](./03-understand.md). A read-only investigation, then `/skill:how`, `/skill:why`, `/skill:teach`, and `/skill:recall` before you edit anything.
+4. [Design the change](./04-design.md). `/skill:architect`, `/skill:arena`, `/skill:swarm`, `/skill:interrogate`, prototypes, and plans before code locks in a shape.
+5. [Build and clean the change](./05-build-and-clean.md). The build playbooks, `/skill:tdd`, `/skill:unslop`, and `/skill:no-comments`.
+6. [Verify and ship](./06-verify-and-ship.md). Prove behavior on the real app, vet numbers with `/skill:benchmark-checklist`, then open a focused PR and drive it to merged.
 7. [Run work while you sleep](./07-overnight.md). Trust before loops, an overnight contract, a decision log you can audit, and Projects and automations that scale past one agent.
 8. [Steer with principle names](./08-principles.md). The 24 names that redirect an agent mid-task.
-9. [Make it yours](./09-make-it-yours.md). Your own mode, `/correct` for repeated mistakes, and how to test a skill change.
+9. [Make it yours](./09-make-it-yours.md). Your own mode, `/skill:correct` for repeated mistakes, and how to test a skill change.
 10. [Recipes and pitfalls](./10-recipes-and-pitfalls.md). Prompts to copy and mistakes to skip.
 
 Read the pages in order the first time. After that, each page stands alone.

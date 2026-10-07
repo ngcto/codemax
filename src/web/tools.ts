@@ -38,7 +38,7 @@ export class WebTools {
       },
     });
     this.pi.registerTool({
-      name: "web", label: "Web", exposure: "codemode", description: "Discover each provider's live tools and schemas, inspect non-secret status, or invoke extra provider capabilities by exact remote name. codemax tool names are unprefixed. Extra capabilities are not assumed to be read-only; respect external-write and billing approval boundaries.",
+      name: "web", label: "Web", exposure: "codemode", description: "Discover provider tools and schemas, inspect status, or call a remote capability by exact name. Extra capabilities require user approval.",
       parameters: Type.Object({ action: enumSchema(["status", "tools", "call"]), provider: Type.Optional(enumSchema(providerIds)), name: Type.Optional(Type.String()), args: Type.Optional(Type.Record(Type.String(), Type.Unknown())) }), outputSchema: dataSchema,
       execute: async (_id, params, signal, _update, ctx) => {
         if (params.action === "status") {

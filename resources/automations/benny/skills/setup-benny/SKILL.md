@@ -6,15 +6,15 @@ disable-model-invocation: true
 
 # Set up Benny
 
-Benny is a dormant procedure pack, not an installed scheduler or a Slack integration. Follow codemax's Pi execution binding. Bundled sources are immutable. User-owned configuration and host code live outside the pack. No instruction grants permission to install software, write to Slack or a tracker, open a PR, or enable normal traffic.
+Configure a project-owned Benny pack, validate its adapters, and connect an approved scheduler/webhook host. Keep user-owned configuration and host code outside the bundled pack.
 
 ## 1. Scaffold without overwriting
 
 Ask which trusted repository owns the automation. In that repository call `automation({action:"scaffold"})`. It copies the full pack to `.pi/automations/benny/`, preserves destination-only files, and reports conflicts without replacing local edits. Review each conflict with the user.
 
-If a separately deployed host needs project-scoped codemax, install it explicitly using `pi install <reviewed-package-source> --local`. Preserve unrelated `.pi/settings.json` entries. Pi uses `packages` settings, not an editor-specific plugins/enabled object. Verify the package in a fresh Pi process rooted in the target repository. Do not silently install or change trust.
+If a separately deployed host needs project-scoped codemax, install it explicitly using `pi install <reviewed-package-source> --local`. Preserve unrelated `.pi/settings.json` entries and configure the package through `packages`. Verify the package in a fresh Pi process rooted in the target repository. Do not silently install or change trust.
 
-Confirm that the copied pack contains FOR_AGENTS.md, both operational skills, their references, and the templates. Skills under this pack are direct instructions, not slash skills. Use `workflow({action:"read",kind:"automation",name:"triage-issue-reports"})` for bundled access.
+Confirm that the copied pack contains FOR_AGENTS.md, both operational skills, their references, and the templates. Read bundled procedures with `workflow({action:"read",kind:"automation",name:"triage-issue-reports"})`.
 
 ## 2. Keep configuration separate
 
@@ -44,13 +44,13 @@ Discover configured Slack and tracker integrations with searchTools and describe
 
 Call `automation({action:"run",phase:"triage",report:<exact-report>,configuration:".pi/benny/configuration.yaml"})` for one exact report. The result is a proposed source-thread verdict and tracker action, not a sent message or created ticket.
 
-After the parent verifies a trusted triage marker, use phase reproduce for one isolated clean-worktree attempt. It may return evidence and local commits. The parent inspects and reruns proof before proposing a draft PR. The bundled runner never posts, merges, deploys, or enables a scheduler.
+After the parent verifies a trusted triage marker, use phase reproduce for one isolated clean-worktree attempt. It may return evidence and local commits. The parent inspects and reruns proof before proposing a draft PR. Only the authorized parent/host performs external writes.
 
 Use stable same-repository paths for deployed files. Commit secret-free operational files only with user approval. A fresh host checkout must contain the exact reviewed pack, configuration, and feature map; never depend on a local package-cache path.
 
 ## 5. Integrate a host explicitly
 
-Pi core does not provide an Automations editor or a built-in automate skill. Choose an existing scheduler/webhook host, or implement a project-owned adapter after approval. The host owns trigger validation, immutable channel/thread coordinates, dedupe state, secrets, cancellation, spend limits, and all external writes.
+Choose an existing scheduler/webhook host, or implement a project-owned adapter after approval. The host owns trigger validation, immutable channel/thread coordinates, dedupe state, secrets, cancellation, spend limits, and all external writes.
 
 Configure two bounded phases. Triage handles a new top-level report and proposes one thread verdict. Reproduction accepts only a trusted configured marker for the same original thread. It checks ownership and existing fixes before attempting any change. Each final external operation is executed by the parent/host under the exact user grant, never by a delegate.
 

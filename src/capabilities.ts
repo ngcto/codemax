@@ -46,7 +46,7 @@ export class Capabilities {
   }
   private checkName(name: string): void {
     safeToolName(name);
-    if (reservedTools.has(name) || (!this.owned.has(name) && this.pi.getAllTools().some((tool) => tool.name === name))) throw new Error("Tool name is already owned: " + name + ". Extend it under a new unprefixed name.");
+    if (reservedTools.has(name) || (!this.owned.has(name) && this.pi.getAllTools().some((tool) => tool.name === name))) throw new Error("Tool name is already owned: " + name + ". Choose another name.");
   }
   private install(definition: StoredCapability): void {
     this.checkName(definition.name);
@@ -61,7 +61,7 @@ export class Capabilities {
   }
   register(): void {
     this.pi.registerTool({
-      name: "capability", label: "Capability", exposure: "codemode", executionMode: "sequential", description: "Create or extend an executable JavaScript capability without modifying bundled instructions. Scope session, project, or global. New tools are unprefixed and callable in the next codemode call. Use action=run to execute one inside the script that saved it. Code is an async body with args, tools, text, image, store, and load; no Node or direct network. Call existing tools to reach the host. Other capabilities may be composed freely.",
+      name: "capability", label: "Capability", exposure: "codemode", executionMode: "sequential", description: "Save JavaScript tools for a session, project, or globally. New tools are callable next script; action=run executes immediately. Code is an async body with args, tools, text, image, store, and load. Call tools for host operations.",
       parameters: Type.Object({ action: enumSchema(["list", "read", "save", "run"]), name: Type.Optional(Type.String()), scope: Type.Optional(enumSchema(["session", "project", "global"])), description: Type.Optional(Type.String()), code: Type.Optional(Type.String()), parameters: Type.Optional(Type.Record(Type.String(), Type.Unknown())), outputSchema: Type.Optional(Type.Record(Type.String(), Type.Unknown())), tools: Type.Optional(Type.Array(Type.String())), args: Type.Optional(Type.Record(Type.String(), Type.Unknown())) }), outputSchema: dataSchema,
       execute: async (_id, params, signal, _update, ctx) => {
         if (params.action === "list") return dataResult([...this.installed.values()].map(({ name, description }) => ({ name, description })));

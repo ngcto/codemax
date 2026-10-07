@@ -4,10 +4,6 @@ description: "Apply when introducing a new internal API while old callers still 
 disable-model-invocation: true
 ---
 
-## Pi execution contract
-
-Use codemode scripts and the unprefixed codemax tools. Read the package execution binding at `../../PI_BINDING.md` when a host-specific operation is unclear. Bundled instructions are read-only. Use `capability` for executable extensions and `learn` for separate evidence-backed skills; never edit this pack. Role/model defaults come from `settings`, only detected model ids, with parent inheritance otherwise. No prose instruction grants external-write, install, credential, billing, or desktop-takeover permission.
-
 # Migrate Callers Then Delete Legacy APIs
 
 When we decide a new API is the right design, migrate callers and remove the old API in the same refactor wave instead of preserving compatibility layers.

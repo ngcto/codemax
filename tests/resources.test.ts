@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readdir, readFile, mkdtemp, writeFile } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { catalog } from "../src/catalog.ts";
+import { catalog, instructions, resource } from "../src/catalog.ts";
 import { bundleRoot, packageRoot } from "../src/paths.ts";
 import { scriptSpecs } from "../src/scripts.ts";
 import { runProcess } from "../src/process.ts";
@@ -42,36 +43,58 @@ test("bundled prose has renamed product references and no dangling local markdow
   assert.deepEqual(errors, []);
 });
 
-test("control guides choose tools by use case without importing harness setup", async () => {
-  const ui = await readFile(join(bundleRoot, "skills/control-ui/SKILL.md"), "utf8");
-  const cli = await readFile(join(bundleRoot, "skills/control-cli/SKILL.md"), "utf8");
-  const row = (body: string, useCase: string) => body.split("\n").find((line) => line.startsWith("| " + useCase + " |")) ?? "";
-  for (const [name, body] of [["control-ui", ui], ["control-cli", cli]] as const) {
-    assert.match(body, new RegExp("^name: " + name + "$", "m"));
-    assert.match(body, /^description: .+$/m);
-    assert.ok(body.includes("| Use case | Prefer |"));
-    assert.ok(body.includes("../browser-use/SKILL.md"));
-    assert.ok(body.includes("../cua-driver/SKILL.md"));
-    assert.doesNotMatch(body, /^disable-model-invocation: true$/m);
-    assert.doesNotMatch(body, /tmux|pty[.]openpty|playwright|remote-debugging-port/i);
+test("resources contain task instructions without shared prompt boilerplate", async () => {
+  const paths = [
+    ...(await walk(bundleRoot)).filter((path) => path.endsWith(".md")),
+    ...(await walk(join(packageRoot, "src"))).filter((path) => path.endsWith(".ts")),
+    join(packageRoot, "README.md"), join(packageRoot, "NOTICE.md"),
+  ];
+  for (const path of paths) {
+    const body = await readFile(path, "utf8");
+    assert.doesNotMatch(body, /## Pi execution contract|unprefixed|No prefix[.]|no dedicated slash commands|not command aliases|workflow labels|Cursor-only commands|resume-agent API|Automations editor|not bundled|no background scheduling API|no loop command is bundled|No separate voice skill|not a new automation harness/i, path);
   }
-  assert.match(row(ui, "Public information"), /fetch/);
-  assert.match(row(ui, "Web page interaction"), /browser-use/);
-  assert.match(row(ui, "Native app"), /cua-driver/);
-  assert.match(row(ui, "GUI-only"), /cua-driver/);
-  assert.match(row(ui, "Browser chrome or OS dialogs"), /cua-driver/);
-  assert.match(row(ui, "Electron renderer"), /browser-use/);
-  assert.match(row(ui, "Electron menus or dialogs"), /cua-driver/);
+  const entry = await resource("deslop", "skill");
+  assert.equal(await instructions(entry), "Resource directory: " + dirname(entry.path) + "\n\n" + await readFile(entry.path, "utf8"));
+});
+
+test("skill references use native Pi commands", async () => {
+  const names = (await catalog()).filter((entry) => entry.kind === "skill").map((entry) => entry.name);
+  const shortCommands = new RegExp("(?<![:/\\w])/(?:" + names.join("|") + ")(?![\\w/-])", "u");
+  for (const path of (await walk(bundleRoot)).filter((path) => path.endsWith(".md"))) {
+    const lines = (await readFile(path, "utf8")).split("\n").filter((line) => !line.trimStart().startsWith("!["));
+    for (const line of lines) assert.doesNotMatch(line, shortCommands, path);
+  }
+});
+
+test("control-ui selects the driver by use case", async () => {
+  const ui = await readFile(join(bundleRoot, "skills/control-ui/SKILL.md"), "utf8");
+  const row = (useCase: string) => ui.split("\n").find((line) => line.startsWith("| " + useCase + " |")) ?? "";
+  assert.match(ui, /^name: control-ui$/m);
+  assert.doesNotMatch(ui, /^disable-model-invocation: true$/m);
+  assert.doesNotMatch(ui, /pty[.]openpty|playwright|remote-debugging-port/i);
+  assert.ok(row("CLI/TUI test").includes("../control-cli/SKILL.md"));
+  assert.ok(ui.includes("For CLI/TUI tests, follow control-cli directly."));
+  assert.match(row("Public information"), /fetch/);
+  assert.match(row("Web page interaction"), /browser-use/);
+  assert.match(row("Native app"), /cua-driver/);
+  assert.match(row("GUI-only"), /cua-driver/);
+  assert.match(row("Browser chrome or OS dialogs"), /cua-driver/);
+  assert.match(row("Electron renderer"), /browser-use/);
+  assert.match(row("Electron menus or dialogs"), /cua-driver/);
+  assert.ok(ui.includes("../browser-use/SKILL.md"));
+  assert.ok(ui.includes("../cua-driver/SKILL.md"));
   assert.ok(ui.includes('action:"status"'));
   assert.ok(ui.includes('action:"setup"'));
   assert.ok(ui.includes("before reading setup guidance"));
   assert.ok(ui.includes("not permission to switch"));
   assert.ok(ui.includes("Observe fresh state, act once, then verify"));
-  assert.match(row(cli, "Noninteractive command"), /verify/);
-  assert.match(row(cli, "Native terminal"), /cua-driver/);
-  assert.match(row(cli, "Browser-hosted terminal"), /browser-use/);
-  assert.ok(cli.includes("../control-ui/SKILL.md"));
-  assert.ok(cli.includes("Do not build or install a terminal harness"));
+});
+
+test("control-cli preserves the original tmux and PTY skill", async () => {
+  const body = await readFile(join(bundleRoot, "skills/control-cli/SKILL.md"), "utf8");
+  assert.equal(createHash("sha256").update(body).digest("hex"), "13ac93e595bbda2000849bdb815d5f2ca03f7c2ca63788c8335f9212b9b422a2");
+  for (const command of ["tmux new-session", "tmux capture-pane", "tmux send-keys", "tmux kill-session", "pty.openpty()", "NODE_OPTIONS="]) assert.ok(body.includes(command), command);
+  assert.doesNotMatch(body, /browser-use|cua-driver|control-ui|Pi execution contract/);
 });
 
 test("deslop preserves cleanup scope, behavior, safety checks, and verification", async () => {
@@ -87,7 +110,6 @@ test("deslop preserves cleanup scope, behavior, safety checks, and verification"
   assert.ok(body.includes("tools.verify"));
   assert.ok(body.includes("../unslop/SKILL.md"));
   assert.ok(body.includes("../no-comments/SKILL.md"));
-  assert.ok(body.includes("Bundled instructions are read-only"));
 });
 
 test("every script tool's default help executes rather than importing an inert module", async () => {

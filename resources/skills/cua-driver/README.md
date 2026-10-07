@@ -73,7 +73,7 @@ Use `--all-platforms` when the agent assists users across operating systems.
 - `EMBEDDING.md`: embedding the driver into another host application.
 
 The agent loads `SKILL.md`, then only the linked guide needed for its next
-step. This bundled source is Linux-filtered. macOS/Windows platform guides are not included; consult the current host guide from https://cua.ai/docs/cua-driver on demand after setup approval. No separate skill installation is needed for the included references. The upstream installer keeps the flat Markdown layout.
+step. This source is Linux-filtered. Consult the current host guide at https://cua.ai/docs/cua-driver on demand after setup approval.
 
 ## Browser model
 

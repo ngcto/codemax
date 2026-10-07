@@ -159,7 +159,7 @@ focus log, so a one-row miss is visible before you type.
 
 **Multi-click.** `click` takes `count: 2` (double) or `count: 3` (triple, a
 line/paragraph selection in editors) as one press train with real double-click
-cadence in both delivery modes; there is no `triple_click` tool.
+cadence in both delivery modes.
 
 **Typing throughput.** Key-event typing (XTest in foreground, the virtual
 keyboard in background) runs at roughly 45-60 characters per second, so a

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { dirname } from "node:path";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { formatSkillsForPrompt, type ExtensionAPI, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { fauxAssistantMessage, getCurrentTools } from "@earendil-works/pi-ai";
@@ -47,7 +48,9 @@ test("native skill commands preserve the request and only-mode tools even with c
       const path = skills.find((skill) => skill.kind === "skill" && skill.name === name)!.path;
       assert.ok(text.startsWith('<skill name="' + name + '" location="' + path + '">'));
       assert.ok(text.includes("References are relative to " + dirname(path) + "."));
-      assert.ok(text.includes("## Pi execution contract"));
+      const body = (await readFile(path, "utf8")).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/u, "").trim();
+      assert.equal(text, `<skill name="${name}" location="${path}">\nReferences are relative to ${dirname(path)}.\n\n${body}\n</skill>\n\n${request}`);
+      assert.ok(!text.includes("## Pi execution contract"));
       assert.ok(text.endsWith("</skill>\n\n" + request));
       assert.deepEqual(declarations, ["codemode"]);
     }
@@ -83,6 +86,11 @@ test("driver skills are hidden from automatic discovery but stay readable on dem
     await h.session.prompt("Explain how to choose a UI driver. Do not run a driver.");
     assert.ok(modelPrompt.includes("<name>control-ui</name>"));
     assert.ok(modelPrompt.includes("read control-ui with workflow(action=read)"));
+    assert.ok(modelPrompt.includes("read control-cli for repo-native harnesses, tmux, and PTY probes"));
+    assert.equal(modelPrompt.split("Bundled instructions are read-only.").length - 1, 1);
+    assert.ok(!modelPrompt.includes("Active workflow capsules:"));
+    assert.ok(!modelPrompt.includes("Learned skills:"));
+    assert.ok(!modelPrompt.includes("## Pi execution contract"));
     for (const name of ["browser-use", "cua-driver"]) assert.ok(!modelPrompt.includes("<name>" + name + "</name>"));
     for (const name of ["browser-use", "cua-driver"]) {
       const result = await h.script('return await tools.workflow({action:"read",kind:"skill",name:' + JSON.stringify(name) + '});');

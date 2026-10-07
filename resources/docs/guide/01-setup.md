@@ -26,13 +26,13 @@ The default budget is `medium`, requesting `high` reasoning. `small` requests `m
 
 You only override what you care about. A role with no line in the rule keeps the skill's default. To restore parent inheritance, save that role as `inherit-parent`. Setup changes only the choices you ask it to save; it does not reset unrelated settings.
 
-You might be wondering what happens if you use Auto. Set a role to `inherit-parent` or `auto` and codemax selects the parent's detected provider/model pair for the fresh worker. Both values mean the same thing, and neither is a model slug. For a panel role the value is a list. Explicit task briefs rotate through those choices; the tasks array controls the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
+You might be wondering what happens if you use Auto. Set a role to `inherit-parent` or `auto` and codemax selects the parent's detected provider/model pair for the fresh worker. Both values mean the same thing, and neither is a model slug. For a panel role the value is a list. Explicit task briefs rotate through those choices; the tasks array controls the panel size. Setup also configures `swarm workers`, the default model for every `/skill:swarm` worker unless a race names a model for each arm.
 
 ## Accept the verification offer, or don't
 
-At the end of setup, `/skill:setup-codemax` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
+At the end of setup, `/skill:setup-codemax` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/skill:create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
 
-Say yes and it writes `.pi/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
+Say yes and it writes `.pi/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/skill:create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
 If you're new to codemax, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
 
@@ -57,6 +57,6 @@ Pick something real but small, and describe it the way you'd describe it to a co
 
 Watch the todo list. Its first items are the matched playbook's steps copied in, the Feature playbook for this prompt. If `/skill:ultracode` skips a step, the step stays in the list with `skip: <reason>`, so you can see what it chose not to do.
 
-From here, type normal follow-ups. The extension injects its concise voice and nontrivial-work posture on every turn. No custom editor mode is needed. The workflow checkpoint follows the active Pi session branch.
+From here, type normal follow-ups. The extension injects its concise voice and nontrivial-work posture on every turn. The workflow checkpoint follows the active Pi session branch.
 
 Next: [Route work through `/skill:ultracode`](./02-ultracode.md).

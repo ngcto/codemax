@@ -1,12 +1,8 @@
 ---
 name: swarm
-description: "Fan out N parallel workers, drain them, and return one report. Use for /swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration."
+description: "Fan out N parallel workers, drain them, and return one report. Use for /skill:swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration."
 disable-model-invocation: true
 ---
-
-## Pi execution contract
-
-Use codemode scripts and the unprefixed codemax tools. Read the package execution binding at `../../PI_BINDING.md` when a host-specific operation is unclear. Bundled instructions are read-only. Use `capability` for executable extensions and `learn` for separate evidence-backed skills; never edit this pack. Role/model defaults come from `settings`, only detected model ids, with parent inheritance otherwise. No prose instruction grants external-write, install, credential, billing, or desktop-takeover permission.
 
 # Swarm
 
@@ -33,7 +29,7 @@ Open a todolist with one entry per phase before launching anything.
 
 Await all independent `delegate` calls together with `Promise.allSettled`, or use `panel({mode:"swarm",tasks:[...]})`. Use the configured step 4 models. Read-only workers retain safe integrations. Set `readOnly:false,isolate:true` for writers. Each writer gets a disjoint clean Git worktree; shared desktop and port access still require one controller and explicit separation.
 
-When a worker needs a different baseline, prepare the exact committed baseline in the parent first and include its SHA in the brief. The bundled delegate starts from parent HEAD; it has no cloud_base_branch parameter.
+When a worker needs a different baseline, prepare the exact committed baseline in the parent first and include its SHA in the brief. Isolated delegates start from parent HEAD.
 
 Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 

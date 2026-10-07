@@ -5,7 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { clampThinkingLevel, type Model, type Usage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { binding, instructions, resource } from "./catalog.ts";
+import { instructions, resource } from "./catalog.ts";
 import { Configuration } from "./config.ts";
 import { bashData, hostShell } from "./control.ts";
 import { dataResult, dataSchema, emptyUsage, addUsage, boundedText } from "./output.ts";
@@ -118,7 +118,7 @@ export class Delegates {
       const extra = task.skill ? await instructions(await resource(task.skill)) : "";
       const profile = task.agent ? await readFile(join(bundleRoot, "agents", task.agent + ".md"), "utf8") : "";
       const posture = task.agent === "ultracode-agent" && task.skill !== "ultracode" ? await instructions(await resource("ultracode", "skill")) : "";
-      const body = ["# Delegate contract", binding, "You own only this assigned slice. Do not post to chat/tickets, push, merge, deploy, or modify bundled instructions. Return observations with paths, commands, evidence, uncertainties, and an actionable result. A self-report is not verification.", task.allowDelegation ? "You may spawn bounded nested workers only for the brief's assigned scope. Depth and concurrency caps still apply." : "Nested delegation is forbidden. Own the assigned implementation directly when a playbook ordinarily delegates it. Do not wait or stand by for an agent you cannot spawn.", readOnly ? "Read-only investigation. Do not change files or external state." : "Work in the assigned isolated checkout. Keep all file writes inside it. Commit verified changes locally and report commit hashes. Do not push or merge.", profile, posture, extra].filter(Boolean).join("\n\n");
+      const body = ["# Delegate contract", "You own only this assigned slice. Do not post to chat/tickets, push, merge, deploy, or modify bundled instructions. Return observations with paths, commands, evidence, uncertainties, and an actionable result. A self-report is not verification.", task.allowDelegation ? "You may spawn bounded nested workers only for the brief's assigned scope. Depth and concurrency caps still apply." : "Nested delegation is forbidden. Own the assigned implementation directly when a playbook ordinarily delegates it. Do not wait or stand by for an agent you cannot spawn.", readOnly ? "Read-only investigation. Do not change files or external state." : "Work in the assigned isolated checkout. Keep all file writes inside it. Commit verified changes locally and report commit hashes. Do not push or merge.", profile, posture, extra].filter(Boolean).join("\n\n");
       await Promise.all([writeFile(policy, body, { mode: 0o600 }), writeFile(prompt, task.task, { mode: 0o600 })]);
       const shell = hostShell(ctx);
       const args = ["--mode", "json", "--print", "--no-session", "--no-extensions", "--extension", "builtin:mcp", "--extension", join(packageRoot, "src", "index.ts"), "--skill", join(packageRoot, "resources", "skills"), "--model", model.provider + "/" + model.id, "--tools", readOnly ? "read," + shell + ",grep,find,ls,codemode" : "read," + shell + ",edit,write,grep,find,ls,codemode", "--append-system-prompt", policy];

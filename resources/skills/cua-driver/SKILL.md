@@ -102,7 +102,7 @@ Load on demand; do not reabsorb these into this file:
 
 - [WORKFLOW.md](WORKFLOW.md): route selection, exact targets, observation, coordinates, verification, filesystem and clipboard proof.
 - [RUNTIME.md](RUNTIME.md): installation checks, CLI/MCP ownership, sessions, authorization, cursor controls, cleanup.
-- Current host only: [LINUX.md](LINUX.md) is bundled from this host-filtered source pack. macOS and Windows references are not present; do not invent a path. If driver readiness or setup is blocked, obtain approval before consulting current platform guidance at https://cua.ai/docs/cua-driver. Keep narrow observation/action scope and report unverified platform support.
+- Linux: [LINUX.md](LINUX.md). For macOS or Windows, consult current platform guidance at https://cua.ai/docs/cua-driver after setup approval. Keep narrow observation/action scope and report unverified platform support.
 - [BROWSER.md](BROWSER.md): exact page binding and typed browser actions; only when the requested method permits them.
 - [RECORDING.md](RECORDING.md): capture lifecycle, artifact checks, replay limits.
 - [EMBEDDING.md](EMBEDDING.md): trusted application-host integration, not routine GUI operation.

@@ -35,7 +35,7 @@ Walk through what each line buys you:
 - Continuation is ordinary bounded codemode work. For unattended event or heartbeat wakes, explicitly configure a watcher, a Pi host extension, or an external scheduler. Neither this package nor Pi's core CLI promises a `/loop` command. The [Autonomous run playbook](../../skills/ultracode/playbooks/autonomous-run.md) defines the checks and checkpoints, not a scheduling service.
 - The escape hatch lets it stop at a genuine dead end and write up why, which beats eight hours of creative goal reinterpretation.
 
-Because you'll review this work after stepping away, `/skill:ultracode` routes it through [`/figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases before any code and wires in the decision log.
+Because you'll review this work after stepping away, `/skill:ultracode` routes it through [`/skill:figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases before any code and wires in the decision log.
 
 To stop a run on purpose, tell the agent to pause, or that you're about to go offline or restart Pi. The [Pause safely playbook](../../skills/ultracode/playbooks/pause-safely.md) finishes or backs out of the current step, commits a work-in-progress checkpoint, and writes a resume note. A fresh chat picks the work up from that note through the Session pickup playbook. Saying "keep going" never triggers a pause.
 
@@ -57,12 +57,12 @@ One change, one check, one log row, every iteration. Changes that didn't help ge
 
 ## The morning audit
 
-[`/show-me-your-work`](../../skills/show-me-your-work/SKILL.md) is what makes the run reviewable. Each row records the time, phase, decision, reason, an evidence pointer, and the result, in a TSV at `decisions.tsv` (or `.audit/<task-slug>.tsv` when several runs share a directory). It stays local by default. Commit it when the work is ambitious enough that a reviewer needs the trail to trust the result.
+[`/skill:show-me-your-work`](../../skills/show-me-your-work/SKILL.md) is what makes the run reviewable. Each row records the time, phase, decision, reason, an evidence pointer, and the result, in a TSV at `decisions.tsv` (or `.audit/<task-slug>.tsv` when several runs share a directory). It stays local by default. Commit it when the work is ambitious enough that a reviewer needs the trail to trust the result.
 
 When you're back, ask for the run in review form:
 
 ```text
-/show-me-your-work catch me up on what you did last night
+/skill:show-me-your-work catch me up on what you did last night
 ```
 
 Before the skill hands back its summary, it spawns a reviewer on a different model family to read the trail and the transcript, and the reply ends with an Attention section listing what deserves your scrutiny. Read that section first, then the log rows it points at. You're auditing decisions, not re-reading the whole night.
@@ -91,7 +91,7 @@ The contract above drives one task to one finish condition. Some nights hold mor
 
 ## Run many projects in parallel
 
-Use one named Pi session and one orchestration store per project. The coordinator directs fresh workers and records their artifacts. Child processes stop with the local host; work does not continue after a laptop sleeps unless you explicitly deploy a persistent host. Remote execution and scheduling are separate integrations, not bundled services.
+Use one named Pi session and one orchestration store per project. The coordinator directs fresh workers and records their artifacts. Child processes stop with the local host; work does not continue after a laptop sleeps unless you explicitly deploy a persistent host.
 
 A few habits help:
 
@@ -103,7 +103,7 @@ A few habits help:
 One prompt can carry a whole Project, from research through execution:
 
 ```text
-/skill:ultracode refactor this repo so its architecture is more agent friendly. use /correct and /architect on past commits and review comments to find the mistakes agents make most here. use /recall for context from past chats. answer open questions with prototypes instead of asking me. come back with a plan backed by real data. once i approve it, run it with autopilot-stack or autopilot-full, and ask me which.
+/skill:ultracode refactor this repo so its architecture is more agent friendly. use /skill:correct and /skill:architect on past commits and review comments to find the mistakes agents make most here. use /skill:recall for context from past chats. answer open questions with prototypes instead of asking me. come back with a plan backed by real data. once i approve it, run it with autopilot-stack or autopilot-full, and ask me which.
 ```
 
 ## Let loops start themselves

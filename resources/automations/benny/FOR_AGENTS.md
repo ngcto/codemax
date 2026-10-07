@@ -70,6 +70,6 @@ the copied pack's files are read directly, not registered as slash skills. commi
 
 first run bounded `automation` rounds that return proposed thread replies, tracker actions, and verified local artifacts. the bundled runner must not send any of them.
 
-Pi core has no Automations editor or built-in automate skill. explicitly configure a scheduler or webhook host only when i ask. the host validates immutable source coordinates, stores secrets, limits spend and runtime, handles dedupe/retries, and executes authorized external operations itself. delegates never receive Slack write grants or secrets.
+configure a scheduler or webhook host only when i ask. the host validates immutable source coordinates, stores secrets, limits spend and runtime, handles dedupe/retries, and executes authorized external operations itself. delegates never receive Slack write grants or secrets.
 
 test thread safety and cancellation, review evidence, then ask before enabling normal traffic. update existing host integrations without creating duplicate triggers.

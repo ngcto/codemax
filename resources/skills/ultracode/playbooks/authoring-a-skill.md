@@ -2,7 +2,7 @@
 
 **You own the skill's voice.**
 
-1. Draft a separate evidence-backed learning with `learn`. Name its trigger, prerequisites, actions, verification, and recovery. For a project-owned instruction edit, use ordinary file tools only outside bundled resources; do not assume a built-in skill authoring service.
+1. Draft a separate evidence-backed learning with `learn`. Name its trigger, prerequisites, actions, verification, and recovery. Edit project-owned instructions with ordinary file tools outside bundled resources.
 2. Validate the skill: frontmatter has `name` and `description`, referenced files exist, cross-skill links resolve.
 3. Test cases if structural. Skip if subjective.
 4. Save with `learn` only after actual evidence. Run **Opening a PR** only for project changes the user asked to publish; personal or session learnings stay in their chosen scope.
